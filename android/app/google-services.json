@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "846887607030",
+    "project_id": "shop-ed9f1",
+    "storage_bucket": "shop-ed9f1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:846887607030:android:6134554d4a3c997c206ad7",
+        "android_client_info": {
+          "package_name": "com.sinasys.e_commerce_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1-ULmc2Z7_7Ve4A_uVGx1dwdc2lZtbUc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
