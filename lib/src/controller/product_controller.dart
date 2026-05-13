@@ -48,14 +48,15 @@ class ProductController extends GetxController {
     update();
   }
 
-  bool addToCart(Product product) {
+  bool addToCart(Product product, {int quantity = 1}) {
     final selectedSize = selectedSizeLabel(product);
     final selectedStock = selectedVariantStock(product);
     final currentVariantQuantity = quantityForVariant(product, selectedSize);
 
     if (!product.isAvailable ||
         selectedStock == 0 ||
-        currentVariantQuantity >= selectedStock) {
+        currentVariantQuantity + quantity > selectedStock ||
+        product.quantity + quantity > product.stock) {
       return false;
     }
 
@@ -67,7 +68,7 @@ class ProductController extends GetxController {
       }
     }
 
-    product.quantity++;
+    product.quantity += quantity;
     if (existingItem == null) {
       cartProducts.add(
         CartItem(
@@ -75,11 +76,11 @@ class ProductController extends GetxController {
           sizeLabel: selectedSize,
           unitPrice: selectedVariantPrice(product),
           stockLimit: selectedStock,
-          quantity: 1,
+          quantity: quantity,
         ),
       );
     } else {
-      existingItem.quantity++;
+      existingItem.quantity += quantity;
       cartProducts.refresh();
     }
 

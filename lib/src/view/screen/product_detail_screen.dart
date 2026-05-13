@@ -7,10 +7,48 @@ import 'package:e_commerce_flutter/src/controller/product_controller.dart';
 
 final ProductController controller = Get.put(ProductController());
 
-class ProductDetailScreen extends StatelessWidget {
+class ProductDetailScreen extends StatefulWidget {
   final Product product;
 
   const ProductDetailScreen(this.product, {super.key});
+
+  @override
+  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  int _quantity = 1;
+
+  Product get product => widget.product;
+
+  void _clampQuantityToStock() {
+    final remainingStock = controller.selectedVariantRemainingStock(product);
+    if (remainingStock <= 0) {
+      _quantity = 1;
+      return;
+    }
+
+    if (_quantity > remainingStock) {
+      _quantity = remainingStock;
+    }
+
+    if (_quantity < 1) {
+      _quantity = 1;
+    }
+  }
+
+  void _increaseQuantity() {
+    final remainingStock = controller.selectedVariantRemainingStock(product);
+    if (remainingStock <= 0 || _quantity >= remainingStock) return;
+
+    setState(() => _quantity++);
+  }
+
+  void _decreaseQuantity() {
+    if (_quantity <= 1) return;
+
+    setState(() => _quantity--);
+  }
 
   PreferredSizeWidget _appBar(BuildContext context) {
     return AppBar(
@@ -45,7 +83,10 @@ class ProductDetailScreen extends StatelessWidget {
       itemBuilder: (_, index) {
         final size = controller.sizeType(product)[index];
         return InkWell(
-          onTap: () => controller.switchBetweenProductSizes(product, index),
+          onTap: () {
+            controller.switchBetweenProductSizes(product, index);
+            setState(_clampQuantityToStock);
+          },
           child: AnimatedContainer(
             margin: const EdgeInsets.only(right: 5, left: 5),
             alignment: Alignment.center,
@@ -81,6 +122,87 @@ class ProductDetailScreen extends StatelessWidget {
                   ),
               ],
             ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _quantitySelector() {
+    return GetBuilder<ProductController>(
+      builder: (_) {
+        final remainingStock =
+            controller.selectedVariantRemainingStock(product);
+        final hasStock = product.isAvailable && remainingStock > 0;
+        final visibleQuantity = hasStock ? _quantity : 0;
+
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Quantity",
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4F4F4),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed:
+                          hasStock && _quantity > 1 ? _decreaseQuantity : null,
+                      icon: const Icon(Icons.remove_rounded),
+                      color: AppColor.darkOrange,
+                    ),
+                    SizedBox(
+                      width: 38,
+                      child: Text(
+                        "$visibleQuantity",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: hasStock ? Colors.black : Colors.grey,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: hasStock && _quantity < remainingStock
+                          ? _increaseQuantity
+                          : null,
+                      icon: const Icon(Icons.add_rounded),
+                      color: AppColor.darkOrange,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -124,7 +246,9 @@ class ProductDetailScreen extends StatelessWidget {
                             GetBuilder<ProductController>(
                               builder: (_) {
                                 return Text(
-                                  "\$${controller.selectedVariantPrice(product)}",
+                                  "\$${controller.selectedVariantPrice(
+                                    product,
+                                  )}",
                                   style:
                                       Theme.of(context).textTheme.displayLarge,
                                 );
@@ -191,16 +315,20 @@ class ProductDetailScreen extends StatelessWidget {
                             builder: (_) => productSizesListView(),
                           ),
                         ),
-                        const SizedBox(height: 30),
+                        const SizedBox(height: 20),
+                        _quantitySelector(),
+                        const SizedBox(height: 18),
                         SizedBox(
                           width: double.infinity,
                           child: GetBuilder<ProductController>(
                             builder: (_) {
-                              final canAdd = product.isAvailable &&
+                              final remainingStock =
                                   controller.selectedVariantRemainingStock(
-                                        product,
-                                      ) >
-                                      0;
+                                product,
+                              );
+                              final canAdd = product.isAvailable &&
+                                  remainingStock > 0 &&
+                                  _quantity <= remainingStock;
                               return ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   padding:
@@ -208,8 +336,12 @@ class ProductDetailScreen extends StatelessWidget {
                                 ),
                                 onPressed: canAdd
                                     ? () {
-                                        final wasAdded =
-                                            controller.addToCart(product);
+                                        final selectedQuantity = _quantity;
+                                        final wasAdded = controller.addToCart(
+                                          product,
+                                          quantity: selectedQuantity,
+                                        );
+                                        setState(_clampQuantityToStock);
                                         ScaffoldMessenger.of(context)
                                             .hideCurrentSnackBar();
                                         ScaffoldMessenger.of(context)
@@ -221,7 +353,8 @@ class ProductDetailScreen extends StatelessWidget {
                                                 : Colors.redAccent,
                                             content: Text(
                                               wasAdded
-                                                  ? "${product.name} (${controller.selectedSizeLabel(product)}) added to cart"
+                                                  ? "$selectedQuantity x ${product.name} "
+                                                      "(${controller.selectedSizeLabel(product)}) added to cart"
                                                   : "No more stock available for ${product.name}",
                                             ),
                                           ),
@@ -229,12 +362,13 @@ class ProductDetailScreen extends StatelessWidget {
                                       }
                                     : null,
                                 child: Text(
-                                    canAdd ? "Add to cart" : "Out of stock",
-                                    style: TextStyle(
-                                      color: canAdd
-                                          ? Colors.white
-                                          : Colors.white.withValues(alpha: 0.7),
-                                    )),
+                                  canAdd ? "Add to cart" : "Out of stock",
+                                  style: TextStyle(
+                                    color: canAdd
+                                        ? Colors.white
+                                        : Colors.white.withValues(alpha: 0.7),
+                                  ),
+                                ),
                               );
                             },
                           ),
