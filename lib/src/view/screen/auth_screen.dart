@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:e_commerce_flutter/core/app_color.dart';
+import 'package:e_commerce_flutter/src/view/screen/email_verification_screen.dart';
+import 'package:e_commerce_flutter/src/view/screen/forgot_password_screen.dart';
 import 'package:e_commerce_flutter/src/view/screen/home_screen.dart';
 
 enum AuthMode { signIn, signUp }
@@ -27,6 +31,10 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isLoading = false;
 
   bool get _isSignUp => _mode == AuthMode.signUp;
+
+  FirebaseAuth get _auth => FirebaseAuth.instance;
+
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
 
   @override
   void initState() {
@@ -101,13 +109,95 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      if (_isSignUp) {
+        final credential = await _auth.createUserWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+
+        final user = credential.user;
+        if (user == null) {
+          throw FirebaseAuthException(
+            code: 'missing-user',
+            message: 'Could not create the user account.',
+          );
+        }
+
+        await user.updateDisplayName(_fullNameController.text.trim());
+        await user.sendEmailVerification();
+        await _firestore.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'fullName': _fullNameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'address': _addressController.text.trim(),
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        final credential = await _auth.signInWithEmailAndPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+
+        await credential.user?.reload();
+      }
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.redAccent,
+          content: Text(_authErrorMessage(error)),
+        ),
+      );
+      return;
+    } on FirebaseException catch (error) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.redAccent,
+          content: Text(error.message ?? 'Something went wrong.'),
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
+    final user = _auth.currentUser;
+    final destination = user != null && user.emailVerified
+        ? const HomeScreen()
+        : const EmailVerificationScreen();
+
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      MaterialPageRoute(builder: (_) => destination),
       (_) => false,
     );
+  }
+
+  String _authErrorMessage(FirebaseAuthException error) {
+    switch (error.code) {
+      case 'email-already-in-use':
+        return 'This email already has an account.';
+      case 'invalid-email':
+        return 'Enter a valid email address.';
+      case 'weak-password':
+        return 'Use a stronger password.';
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'Email or password is incorrect.';
+      case 'network-request-failed':
+        return 'Check your internet connection.';
+      default:
+        return error.message ?? 'Authentication failed.';
+    }
   }
 
   InputDecoration _inputDecoration({
@@ -227,6 +317,27 @@ class _AuthScreenState extends State<AuthScreen> {
                       const SizedBox(height: 14),
                     ],
                     _passwordField(),
+                    if (!_isSignUp) ...[
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          const ForgotPasswordScreen(),
+                                    ),
+                                  );
+                                },
+                          child: const Text(
+                            "Forgot password?",
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ],
                     if (_isSignUp) ...[
                       const SizedBox(height: 14),
                       TextFormField(

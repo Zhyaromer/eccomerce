@@ -1,7 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:e_commerce_flutter/core/app_color.dart';
+import 'package:e_commerce_flutter/src/view/screen/email_verification_screen.dart';
+import 'package:e_commerce_flutter/src/view/screen/home_screen.dart';
 import 'package:e_commerce_flutter/src/view/screen/welcome_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -15,13 +16,30 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 2), () {
-      if (!mounted) return;
+    _finishSplash();
+  }
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-      );
-    });
+  Future<void> _finishSplash() async {
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    await user?.reload();
+    final refreshedUser = FirebaseAuth.instance.currentUser;
+
+    final Widget nextScreen;
+    if (refreshedUser == null) {
+      nextScreen = const WelcomeScreen();
+    } else if (refreshedUser.emailVerified) {
+      nextScreen = const HomeScreen();
+    } else {
+      nextScreen = const EmailVerificationScreen();
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => nextScreen),
+    );
   }
 
   @override

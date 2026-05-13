@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' show PointerDeviceKind;
+import 'package:firebase_core/firebase_core.dart';
 import 'package:e_commerce_flutter/core/app_theme.dart';
+import 'package:e_commerce_flutter/firebase_options.dart';
 import 'package:e_commerce_flutter/src/view/screen/splash_screen.dart';
 
-void main() => runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

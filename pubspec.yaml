@@ -22,6 +22,7 @@ dependencies:
   stylish_bottom_bar: ^1.1.0
   firebase_core: ^4.8.0
   firebase_auth: ^6.5.0
+  cloud_firestore: ^6.0.0
 
 dev_dependencies:
   flutter_lints: ^5.0.0
