@@ -114,7 +114,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
                 if (size.price != null)
                   Text(
-                    "\$${size.price}",
+                    "\$${controller.discountedPriceFor(product, size.price!)}",
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 11,

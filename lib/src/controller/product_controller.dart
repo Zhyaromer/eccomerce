@@ -167,11 +167,12 @@ class ProductController extends GetxController {
     final selectedSize = selectedSizeLabel(product);
     final selectedStock = selectedVariantStock(product);
     final currentVariantQuantity = quantityForVariant(product, selectedSize);
+    final usesVariantStock = selectedSize != 'Default';
 
     if (!product.isAvailable ||
         selectedStock == 0 ||
         currentVariantQuantity + quantity > selectedStock ||
-        product.quantity + quantity > product.stock) {
+        (!usesVariantStock && product.quantity + quantity > product.stock)) {
       return false;
     }
 
@@ -190,6 +191,7 @@ class ProductController extends GetxController {
           product: product,
           sizeLabel: selectedSize,
           unitPrice: selectedVariantPrice(product),
+          originalUnitPrice: selectedVariantOriginalPrice(product),
           stockLimit: selectedStock,
           quantity: quantity,
         ),
@@ -235,12 +237,19 @@ class ProductController extends GetxController {
 
   bool isPriceOff(Product product) => hasDiscount(product);
 
+  int discountedPriceFor(Product product, int price) {
+    if (!hasDiscount(product)) return price;
+
+    final discountedPrice = price - product.off!;
+    return discountedPrice < 0 ? 0 : discountedPrice;
+  }
+
   int productDisplayPrice(Product product) {
-    return product.price;
+    return discountedPriceFor(product, product.price);
   }
 
   int? productOriginalPrice(Product product) {
-    return hasDiscount(product) ? product.price + product.off! : null;
+    return hasDiscount(product) ? product.price : null;
   }
 
   bool get isEmptyCart => cartProducts.isEmpty;
@@ -413,16 +422,16 @@ class ProductController extends GetxController {
   }
 
   int selectedVariantPrice(Product product) {
-    return _selectedVariantRawPrice(product) ?? productDisplayPrice(product);
+    return discountedPriceFor(
+      product,
+      _selectedVariantRawPrice(product) ?? product.price,
+    );
   }
 
   int? selectedVariantOriginalPrice(Product product) {
-    final variantPrice = _selectedVariantRawPrice(product);
-    if (variantPrice != null) {
-      return null;
-    }
+    if (!hasDiscount(product)) return null;
 
-    return productOriginalPrice(product);
+    return _selectedVariantRawPrice(product) ?? product.price;
   }
 
   int selectedVariantStock(Product product) {

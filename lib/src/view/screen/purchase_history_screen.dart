@@ -25,6 +25,11 @@ class PurchaseHistoryScreen extends StatelessWidget {
     return "${months[date.month - 1]} ${date.day}, ${date.year}";
   }
 
+  int _readInt(dynamic value, {int fallback = 0}) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
   Widget _emptyState() {
     return const Center(
       child: Padding(
@@ -61,7 +66,7 @@ class PurchaseHistoryScreen extends StatelessWidget {
         .toList();
     final createdAt = data['createdAt'] as Timestamp?;
     final date = createdAt?.toDate() ?? DateTime.now();
-    final total = data['total'] as int? ?? 0;
+    final total = _readInt(data['total']);
     final status = data['status'] as String? ?? 'Purchased';
     final title = items.isEmpty
         ? 'Purchase'
@@ -116,7 +121,7 @@ class PurchaseHistoryScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   ...items.map((item) {
                     final name = item['productName'] as String? ?? 'Item';
-                    final quantity = item['quantity'] as int? ?? 1;
+                    final quantity = _readInt(item['quantity'], fallback: 1);
                     final size = item['sizeLabel'] as String? ?? 'Default';
 
                     return Text(

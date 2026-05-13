@@ -212,6 +212,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'productName': item.product.name,
         'sizeLabel': item.sizeLabel,
         'unitPrice': item.unitPrice,
+        'originalUnitPrice': item.originalUnitPrice,
         'quantity': item.quantity,
         'lineTotal': item.lineTotal,
         'imagePath':
@@ -265,23 +266,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
       }
 
-      final stock = productData['stock'] as int? ?? 0;
-      if (stock < purchasedQuantity) {
-        throw FirebaseException(
-          plugin: 'cloud_firestore',
-          message: 'Not enough stock for $productName.',
-        );
-      }
-
+      final stock = _readInt(productData['stock']);
       final updatedData = Map<String, dynamic>.from(productData);
-      updatedData['stock'] = stock - purchasedQuantity;
-      updatedData['isAvailable'] = updatedData['stock'] > 0;
-
       final sizes = productData['sizes'];
-      if (sizes is Map<String, dynamic>) {
-        var updatedSizes = sizes;
+      final hasVariantItems =
+          productItems.any((item) => item.sizeLabel != 'Default');
+
+      if (sizes is Map && hasVariantItems) {
+        var updatedSizes = Map<String, dynamic>.from(sizes);
+        var reducedTrackedVariantStock = false;
+        var untrackedQuantity = 0;
+
         for (final item in productItems) {
-          if (item.sizeLabel == 'Default') continue;
+          if (item.sizeLabel == 'Default') {
+            untrackedQuantity += item.quantity;
+            continue;
+          }
 
           final reducedSizes = _reduceVariantStock(
             updatedSizes,
@@ -296,11 +296,40 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             );
           }
 
-          updatedSizes = reducedSizes;
+          updatedSizes = reducedSizes.sizes;
+          if (reducedSizes.stockWasTracked) {
+            reducedTrackedVariantStock = true;
+          } else {
+            untrackedQuantity += item.quantity;
+          }
         }
+
         updatedData['sizes'] = updatedSizes;
+
+        if (reducedTrackedVariantStock) {
+          final trackedStockTotal = _variantStockTotal(updatedSizes);
+          final mixedStock = trackedStockTotal + (stock - untrackedQuantity);
+          updatedData['stock'] = mixedStock < 0 ? 0 : mixedStock;
+        } else {
+          if (stock < purchasedQuantity) {
+            throw FirebaseException(
+              plugin: 'cloud_firestore',
+              message: 'Not enough stock for $productName.',
+            );
+          }
+          updatedData['stock'] = stock - purchasedQuantity;
+        }
+      } else {
+        if (stock < purchasedQuantity) {
+          throw FirebaseException(
+            plugin: 'cloud_firestore',
+            message: 'Not enough stock for $productName.',
+          );
+        }
+        updatedData['stock'] = stock - purchasedQuantity;
       }
 
+      updatedData['isAvailable'] = _readInt(updatedData['stock']) > 0;
       batch.update(productRef, updatedData);
     }
 
@@ -335,45 +364,76 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     await batch.commit();
   }
 
-  Map<String, dynamic>? _reduceVariantStock(
+  int _readInt(dynamic value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  int _variantStockTotal(Map<String, dynamic> sizes) {
+    var total = 0;
+    for (final key in ['numerical', 'categorical']) {
+      final rawVariants = sizes[key];
+      if (rawVariants is! List<dynamic>) continue;
+
+      for (final item in rawVariants) {
+        if (item is Map) {
+          total += _readInt(item['stock']);
+        }
+      }
+    }
+    return total;
+  }
+
+  String _normalizeVariantLabel(dynamic value) {
+    return value == null
+        ? ''
+        : value
+            .toString()
+            .trim()
+            .toLowerCase()
+            .replaceFirst('categoricaltype.', '');
+  }
+
+  ({Map<String, dynamic> sizes, bool stockWasTracked})? _reduceVariantStock(
     Map<String, dynamic> sizes,
     String sizeLabel,
     int quantity,
   ) {
     final updatedSizes = Map<String, dynamic>.from(sizes);
-    final listKey = updatedSizes.containsKey('numerical')
-        ? 'numerical'
-        : updatedSizes.containsKey('categorical')
-            ? 'categorical'
-            : null;
+    final targetLabel = _normalizeVariantLabel(sizeLabel);
 
-    if (listKey == null) return updatedSizes;
+    for (final listKey in ['numerical', 'categorical']) {
+      final rawVariants = updatedSizes[listKey];
+      if (rawVariants is! List<dynamic>) continue;
 
-    final rawVariants = updatedSizes[listKey];
-    if (rawVariants is! List<dynamic>) {
-      return null;
+      final variants = rawVariants
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+
+      final variantIndex = variants.indexWhere(
+        (variant) => _normalizeVariantLabel(variant['value']) == targetLabel,
+      );
+
+      if (variantIndex == -1) continue;
+
+      final variant = variants[variantIndex];
+      if (!variant.containsKey('stock') || variant['stock'] == null) {
+        return (sizes: updatedSizes, stockWasTracked: false);
+      }
+
+      final stock = _readInt(variant['stock']);
+      if (stock < quantity) {
+        return null;
+      }
+
+      variant['stock'] = stock - quantity;
+      variants[variantIndex] = variant;
+      updatedSizes[listKey] = variants;
+      return (sizes: updatedSizes, stockWasTracked: true);
     }
 
-    final variants = rawVariants
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
-
-    final variantIndex = variants.indexWhere(
-      (variant) => variant['value'] == sizeLabel,
-    );
-
-    if (variantIndex == -1) return updatedSizes;
-
-    final variant = variants[variantIndex];
-    final stock = variant['stock'] as int? ?? 0;
-    if (stock < quantity) {
-      return null;
-    }
-
-    variant['stock'] = stock - quantity;
-    variants[variantIndex] = variant;
-    updatedSizes[listKey] = variants;
-    return updatedSizes;
+    return (sizes: updatedSizes, stockWasTracked: false);
   }
 
   InputDecoration _inputDecoration(

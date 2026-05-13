@@ -109,26 +109,15 @@ class CartScreen extends StatelessWidget {
                           fontSize: 23,
                         ),
                       ),
-                      if (cartItem.unitPrice ==
-                          controller.productDisplayPrice(product))
-                        Builder(
-                          builder: (_) {
-                            final previousPrice =
-                                controller.productOriginalPrice(product);
-                            if (previousPrice == null) {
-                              return const SizedBox.shrink();
-                            }
-
-                            return Text(
-                              "\$$previousPrice",
-                              style: const TextStyle(
-                                decoration: TextDecoration.lineThrough,
-                                decorationColor: Colors.red,
-                                color: Colors.red,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            );
-                          },
+                      if (cartItem.originalUnitPrice != null)
+                        Text(
+                          "\$${cartItem.originalUnitPrice}",
+                          style: const TextStyle(
+                            decoration: TextDecoration.lineThrough,
+                            decorationColor: Colors.red,
+                            color: Colors.red,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                     ],
                   ),
