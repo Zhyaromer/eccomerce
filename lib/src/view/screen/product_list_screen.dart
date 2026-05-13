@@ -79,7 +79,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
         controller: _searchController,
         onChanged: (value) {
           controller.searchProducts(value);
+          setState(() {});
         },
+        textAlignVertical: TextAlignVertical.center,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
           hintText: 'Search products',
@@ -92,12 +94,12 @@ class _ProductListScreenState extends State<ProductListScreen> {
                   onPressed: () {
                     _searchController.clear();
                     controller.searchProducts('');
+                    setState(() {});
                   },
                   icon: const Icon(Icons.close_rounded),
                 ),
           border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
         ),
       ),
     );
