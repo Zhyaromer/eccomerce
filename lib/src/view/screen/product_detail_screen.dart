@@ -254,18 +254,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 );
                               },
                             ),
-                            const SizedBox(width: 3),
-                            Visibility(
-                              visible: product.off != null ? true : false,
-                              child: Text(
-                                "\$${product.price}",
-                                style: const TextStyle(
-                                  decoration: TextDecoration.lineThrough,
-                                  decorationColor: Colors.red,
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
+                            const SizedBox(width: 5),
+                            GetBuilder<ProductController>(
+                              builder: (_) {
+                                final previousPrice = controller
+                                    .selectedVariantOriginalPrice(product);
+                                if (previousPrice == null) {
+                                  return const SizedBox.shrink();
+                                }
+
+                                return Text(
+                                  "\$$previousPrice",
+                                  style: const TextStyle(
+                                    decoration: TextDecoration.lineThrough,
+                                    decorationColor: Colors.red,
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                );
+                              },
                             ),
                             const Spacer(),
                             GetBuilder<ProductController>(

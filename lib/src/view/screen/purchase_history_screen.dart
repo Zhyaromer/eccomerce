@@ -1,42 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:e_commerce_flutter/core/app_color.dart';
-import 'package:e_commerce_flutter/src/model/purchase_history_item.dart';
 
 class PurchaseHistoryScreen extends StatelessWidget {
-  PurchaseHistoryScreen({super.key});
-
-  final List<PurchaseHistoryItem> purchases = [
-    PurchaseHistoryItem(
-      title: "Apple Watch 7",
-      date: DateTime(2026, 5, 10),
-      total: "\$360",
-      status: "Delivered",
-    ),
-    PurchaseHistoryItem(
-      title: "Samsung Galaxy A53 5G",
-      date: DateTime(2026, 4, 28),
-      total: "\$300",
-      status: "Delivered",
-    ),
-    PurchaseHistoryItem(
-      title: "Beats studio 3",
-      date: DateTime(2026, 3, 16),
-      total: "\$230",
-      status: "Delivered",
-    ),
-    PurchaseHistoryItem(
-      title: "Samsung Q60 A",
-      date: DateTime(2026, 2, 4),
-      total: "\$560",
-      status: "Delivered",
-    ),
-    PurchaseHistoryItem(
-      title: "Samsung Galaxy Watch 4",
-      date: DateTime(2026, 1, 19),
-      total: "\$215",
-      status: "Delivered",
-    ),
-  ]..sort((a, b) => b.date.compareTo(a.date));
+  const PurchaseHistoryScreen({super.key});
 
   String _formatDate(DateTime date) {
     const months = [
@@ -57,7 +25,50 @@ class PurchaseHistoryScreen extends StatelessWidget {
     return "${months[date.month - 1]} ${date.day}, ${date.year}";
   }
 
-  Widget _purchaseTile(PurchaseHistoryItem purchase) {
+  Widget _emptyState() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              size: 54,
+              color: AppColor.darkOrange,
+            ),
+            SizedBox(height: 14),
+            Text(
+              "No purchases yet",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+            ),
+            SizedBox(height: 6),
+            Text(
+              "Checkout your cart and your orders will show up here.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _purchaseTile(DocumentSnapshot<Map<String, dynamic>> document) {
+    final data = document.data() ?? {};
+    final items = (data['items'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .toList();
+    final createdAt = data['createdAt'] as Timestamp?;
+    final date = createdAt?.toDate() ?? DateTime.now();
+    final total = data['total'] as int? ?? 0;
+    final status = data['status'] as String? ?? 'Purchased';
+    final title = items.isEmpty
+        ? 'Purchase'
+        : items.length == 1
+            ? items.first['productName'] as String? ?? 'Purchase'
+            : '${items.length} items purchased';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -90,7 +101,7 @@ class PurchaseHistoryScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  purchase.title,
+                  title,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -98,14 +109,31 @@ class PurchaseHistoryScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "${_formatDate(purchase.date)} - ${purchase.status}",
+                  "${_formatDate(date)} - $status",
                   style: const TextStyle(color: Colors.grey, fontSize: 13),
                 ),
+                if (items.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ...items.map((item) {
+                    final name = item['productName'] as String? ?? 'Item';
+                    final quantity = item['quantity'] as int? ?? 1;
+                    final size = item['sizeLabel'] as String? ?? 'Default';
+
+                    return Text(
+                      "$quantity x $name ($size)",
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    );
+                  }),
+                ],
               ],
             ),
           ),
           Text(
-            purchase.total,
+            "\$$total",
             style: const TextStyle(
               color: AppColor.darkOrange,
               fontSize: 16,
@@ -119,6 +147,8 @@ class PurchaseHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8F8),
       appBar: AppBar(
@@ -131,10 +161,48 @@ class PurchaseHistoryScreen extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 700),
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: purchases.map(_purchaseTile).toList(),
-            ),
+            child: user == null
+                ? _emptyState()
+                : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(user.uid)
+                        .collection('purchases')
+                        .orderBy('createdAt', descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColor.darkOrange,
+                          ),
+                        );
+                      }
+
+                      if (snapshot.hasError) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text(
+                              "Could not load purchase history.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                        );
+                      }
+
+                      final purchases = snapshot.data?.docs ?? [];
+                      if (purchases.isEmpty) {
+                        return _emptyState();
+                      }
+
+                      return ListView(
+                        padding: const EdgeInsets.all(20),
+                        children: purchases.map(_purchaseTile).toList(),
+                      );
+                    },
+                  ),
           ),
         ),
       ),

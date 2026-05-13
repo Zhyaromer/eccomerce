@@ -6,12 +6,16 @@ class ProductGridView extends StatelessWidget {
   const ProductGridView({
     super.key,
     required this.items,
-    required this.isPriceOff,
+    required this.hasDiscount,
+    required this.displayPrice,
+    required this.originalPrice,
     required this.likeButtonPressed,
   });
 
   final List<Product> items;
-  final bool Function(Product product) isPriceOff;
+  final bool Function(Product product) hasDiscount;
+  final int Function(Product product) displayPrice;
+  final int? Function(Product product) originalPrice;
   final void Function(int index) likeButtonPressed;
 
   Widget _gridItemHeader(Product product, int index) {
@@ -21,7 +25,7 @@ class ProductGridView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Visibility(
-            visible: isPriceOff(product),
+            visible: hasDiscount(product),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(30),
@@ -62,6 +66,8 @@ class ProductGridView extends StatelessWidget {
   }
 
   Widget _gridItemFooter(Product product, BuildContext context) {
+    final previousPrice = originalPrice(product);
+
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Container(
@@ -97,9 +103,7 @@ class ProductGridView extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      product.off != null
-                          ? "\$${product.off}"
-                          : "\$${product.price}",
+                      "\$${displayPrice(product)}",
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -107,20 +111,17 @@ class ProductGridView extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 5),
-                    Visibility(
-                      visible: product.off != null ? true : false,
-                      child: Text(
-                        "\$${product.price}",
+                    if (previousPrice != null)
+                      Text(
+                        "\$$previousPrice",
                         style: TextStyle(
                           fontSize: 12,
                           decoration: TextDecoration.lineThrough,
                           decorationColor: Colors.red,
-                          color:
-                              product.off != null ? Colors.red : Colors.black,
+                          color: Colors.red,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ),
                   ],
                 ),
                 Text(

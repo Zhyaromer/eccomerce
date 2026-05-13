@@ -75,7 +75,9 @@ class FavoriteScreen extends StatelessWidget {
               likeButtonPressed: (index) {
                 controller.isFavorite(index);
               },
-              isPriceOff: (product) => controller.isPriceOff(product),
+              hasDiscount: controller.hasDiscount,
+              displayPrice: controller.productDisplayPrice,
+              originalPrice: controller.productOriginalPrice,
             );
           },
         ),

@@ -20,8 +20,8 @@ class Categorical {
         orElse: () => CategoricalType.small,
       ),
       map['isSelected'] as bool? ?? false,
-      price: map['price'] as int?,
-      stock: map['stock'] as int?,
+      price: (map['price'] as num?)?.toInt(),
+      stock: (map['stock'] as num?)?.toInt(),
     );
   }
 

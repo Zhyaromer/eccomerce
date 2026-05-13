@@ -46,10 +46,10 @@ class Product {
     return Product(
       id: id,
       name: map['name'] as String? ?? '',
-      price: map['price'] as int? ?? 0,
+      price: (map['price'] as num?)?.toInt() ?? 0,
       isAvailable: map['isAvailable'] as bool? ?? false,
-      stock: map['stock'] as int? ?? 0,
-      off: map['off'] as int?,
+      stock: (map['stock'] as num?)?.toInt() ?? 0,
+      off: (map['off'] as num?)?.toInt(),
       quantity: 0,
       images: (map['images'] as List<dynamic>?)?.cast<String>() ?? [],
       isFavorite: false,

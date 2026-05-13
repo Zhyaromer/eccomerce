@@ -320,7 +320,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       likeButtonPressed: (index) {
                         controller.isFavorite(index);
                       },
-                      isPriceOff: (product) => controller.isPriceOff(product),
+                      hasDiscount: controller.hasDiscount,
+                      displayPrice: controller.productDisplayPrice,
+                      originalPrice: controller.productOriginalPrice,
                     );
                   },
                 ),

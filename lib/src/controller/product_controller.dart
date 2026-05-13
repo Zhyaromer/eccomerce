@@ -65,8 +65,8 @@ class ProductController extends GetxController {
     }
   }
 
-  Future<void> fetchProductsFromFirestore() async {
-    if (_productsLoadedFromFirestore) return;
+  Future<void> fetchProductsFromFirestore({bool forceRefresh = false}) async {
+    if (_productsLoadedFromFirestore && !forceRefresh) return;
 
     isLoadingProducts = true;
     productsError = null;
@@ -229,7 +229,19 @@ class ProductController extends GetxController {
     update();
   }
 
-  bool isPriceOff(Product product) => product.off != null;
+  bool hasDiscount(Product product) {
+    return product.off != null && product.off! > 0;
+  }
+
+  bool isPriceOff(Product product) => hasDiscount(product);
+
+  int productDisplayPrice(Product product) {
+    return product.price;
+  }
+
+  int? productOriginalPrice(Product product) {
+    return hasDiscount(product) ? product.price + product.off! : null;
+  }
 
   bool get isEmptyCart => cartProducts.isEmpty;
 
@@ -380,11 +392,11 @@ class ProductController extends GetxController {
         : currentSize.replaceFirst('Size: ', '');
   }
 
-  int selectedVariantPrice(Product product) {
+  int? _selectedVariantRawPrice(Product product) {
     if (product.sizes?.categorical != null) {
       for (final element in product.sizes!.categorical!) {
         if (element.isSelected) {
-          return element.price ?? product.off ?? product.price;
+          return element.price;
         }
       }
     }
@@ -392,12 +404,25 @@ class ProductController extends GetxController {
     if (product.sizes?.numerical != null) {
       for (final element in product.sizes!.numerical!) {
         if (element.isSelected) {
-          return element.price ?? product.off ?? product.price;
+          return element.price;
         }
       }
     }
 
-    return product.off ?? product.price;
+    return null;
+  }
+
+  int selectedVariantPrice(Product product) {
+    return _selectedVariantRawPrice(product) ?? productDisplayPrice(product);
+  }
+
+  int? selectedVariantOriginalPrice(Product product) {
+    final variantPrice = _selectedVariantRawPrice(product);
+    if (variantPrice != null) {
+      return null;
+    }
+
+    return productOriginalPrice(product);
   }
 
   int selectedVariantStock(Product product) {
