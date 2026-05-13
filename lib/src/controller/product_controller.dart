@@ -1,3 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get_rx/src/rx_types/rx_types.dart';
 import 'package:e_commerce_flutter/core/app_data.dart';
 import 'package:e_commerce_flutter/src/model/cart_item.dart';
@@ -15,8 +17,39 @@ class ProductController extends GetxController {
   RxInt totalPrice = 0.obs;
   String _searchQuery = '';
   ProductType _selectedType = ProductType.all;
+  bool _showingFavorites = false;
+
+  String _favoriteDocumentId(Product product) {
+    return product.name.replaceAll('/', '_');
+  }
+
+  CollectionReference<Map<String, dynamic>>? get _favoriteCollection {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('favorites');
+  }
+
+  Future<void> syncFavoritesFromFirestore() async {
+    final favoriteCollection = _favoriteCollection;
+    if (favoriteCollection == null) return;
+
+    final snapshot = await favoriteCollection.get();
+    final favoriteNames = snapshot.docs
+        .map((doc) => doc.data()['productName'] as String?)
+        .whereType<String>()
+        .toSet();
+
+    for (final product in allProducts) {
+      product.isFavorite = favoriteNames.contains(product.name);
+    }
+  }
 
   void filterItemsByCategory(int index) {
+    _showingFavorites = false;
     for (ProductCategory element in categories) {
       element.isSelected = false;
     }
@@ -26,6 +59,7 @@ class ProductController extends GetxController {
   }
 
   void searchProducts(String query) {
+    _showingFavorites = false;
     _searchQuery = query.trim().toLowerCase();
     _applyFilters();
   }
@@ -43,9 +77,34 @@ class ProductController extends GetxController {
     update();
   }
 
-  void isFavorite(int index) {
-    filteredProducts[index].isFavorite = !filteredProducts[index].isFavorite;
+  Future<void> isFavorite(int index) async {
+    final product = filteredProducts[index];
+    product.isFavorite = !product.isFavorite;
     update();
+
+    final favoriteCollection = _favoriteCollection;
+    if (favoriteCollection != null) {
+      final favoriteDoc = favoriteCollection.doc(_favoriteDocumentId(product));
+      if (product.isFavorite) {
+        await favoriteDoc.set({
+          'productName': product.name,
+          'productType': product.type.name,
+          'price': product.price,
+          'off': product.off,
+          'imagePath': product.images.first,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        await favoriteDoc.delete();
+      }
+    }
+
+    if (_showingFavorites) {
+      filteredProducts.assignAll(
+        allProducts.where((item) => item.isFavorite),
+      );
+      update();
+    }
   }
 
   bool addToCart(Product product, {int quantity = 1}) {
@@ -137,19 +196,21 @@ class ProductController extends GetxController {
     }
   }
 
-  getFavoriteItems() {
+  Future<void> getFavoriteItems() async {
+    _showingFavorites = true;
+    await syncFavoritesFromFirestore();
     filteredProducts.assignAll(
       allProducts.where((item) => item.isFavorite),
     );
+    update();
   }
 
   getCartItems() {
     cartProducts.refresh();
   }
 
-  void showFavoriteItems() {
-    getFavoriteItems();
-    update();
+  Future<void> showFavoriteItems() async {
+    await getFavoriteItems();
   }
 
   void refreshCart() {
@@ -166,7 +227,9 @@ class ProductController extends GetxController {
     update();
   }
 
-  getAllItems() {
+  Future<void> getAllItems() async {
+    _showingFavorites = false;
+    await syncFavoritesFromFirestore();
     _searchQuery = '';
     _selectedType = ProductType.all;
     for (ProductCategory element in categories) {

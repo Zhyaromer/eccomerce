@@ -266,8 +266,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
                     return ProductGridView(
                       items: controller.filteredProducts,
-                      likeButtonPressed: (index) =>
-                          controller.isFavorite(index),
+                      likeButtonPressed: (index) {
+                        controller.isFavorite(index);
+                      },
                       isPriceOff: (product) => controller.isPriceOff(product),
                     );
                   },
