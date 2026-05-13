@@ -12,4 +12,25 @@ class Categorical {
     this.price,
     this.stock,
   });
+
+  factory Categorical.fromMap(Map<String, dynamic> map) {
+    return Categorical(
+      CategoricalType.values.firstWhere(
+        (type) => type.name == map['value'],
+        orElse: () => CategoricalType.small,
+      ),
+      map['isSelected'] as bool? ?? false,
+      price: map['price'] as int?,
+      stock: map['stock'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'value': categorical.name,
+      'isSelected': isSelected,
+      'price': price,
+      'stock': stock,
+    };
+  }
 }

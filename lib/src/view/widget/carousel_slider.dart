@@ -33,7 +33,7 @@ class _CarouselSliderState extends State<CarouselSlider> {
             itemBuilder: (_, index) {
               return FittedBox(
                 fit: BoxFit.none,
-                child: Image.asset(widget.items[index], scale: 3),
+                child: Image.network(widget.items[index], scale: 3),
               );
             },
           ),

@@ -10,17 +10,29 @@ import 'package:e_commerce_flutter/src/model/product_category.dart';
 import 'package:e_commerce_flutter/src/model/product_size_type.dart';
 
 class ProductController extends GetxController {
-  List<Product> allProducts = AppData.products;
-  RxList<Product> filteredProducts = AppData.products.obs;
+  List<Product> allProducts = [];
+  RxList<Product> filteredProducts = <Product>[].obs;
   RxList<CartItem> cartProducts = <CartItem>[].obs;
   RxList<ProductCategory> categories = AppData.categories.obs;
   RxInt totalPrice = 0.obs;
   String _searchQuery = '';
   ProductType _selectedType = ProductType.all;
   bool _showingFavorites = false;
+  bool isLoadingProducts = false;
+  String? productsError;
+  bool _productsLoadedFromFirestore = false;
+
+  String _productDocumentId(Product product) {
+    final normalizedName = product.name
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
+
+    return normalizedName.isEmpty ? product.name : normalizedName;
+  }
 
   String _favoriteDocumentId(Product product) {
-    return product.name.replaceAll('/', '_');
+    return product.id ?? _productDocumentId(product);
   }
 
   CollectionReference<Map<String, dynamic>>? get _favoriteCollection {
@@ -38,13 +50,56 @@ class ProductController extends GetxController {
     if (favoriteCollection == null) return;
 
     final snapshot = await favoriteCollection.get();
+    final favoriteIds = snapshot.docs
+        .map((doc) => doc.data()['productId'] as String?)
+        .whereType<String>()
+        .toSet();
     final favoriteNames = snapshot.docs
         .map((doc) => doc.data()['productName'] as String?)
         .whereType<String>()
         .toSet();
 
     for (final product in allProducts) {
-      product.isFavorite = favoriteNames.contains(product.name);
+      product.isFavorite = favoriteIds.contains(product.id) ||
+          favoriteNames.contains(product.name);
+    }
+  }
+
+  Future<void> fetchProductsFromFirestore() async {
+    if (_productsLoadedFromFirestore) return;
+
+    isLoadingProducts = true;
+    productsError = null;
+    update();
+
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('products').get();
+
+      final docs = snapshot.docs.toList()
+        ..sort((a, b) {
+          final aOrder = a.data()['sortOrder'] as int?;
+          final bOrder = b.data()['sortOrder'] as int?;
+
+          if (aOrder != null && bOrder != null) {
+            return aOrder.compareTo(bOrder);
+          }
+
+          return a.id.compareTo(b.id);
+        });
+
+      allProducts =
+          docs.map((doc) => Product.fromMap(doc.id, doc.data())).toList();
+      filteredProducts.assignAll(allProducts);
+      _productsLoadedFromFirestore = true;
+    } on FirebaseException catch (error) {
+      allProducts = [];
+      filteredProducts.clear();
+      _productsLoadedFromFirestore = false;
+      productsError = error.message ?? 'Could not load products.';
+    } finally {
+      isLoadingProducts = false;
+      update();
     }
   }
 
@@ -87,11 +142,12 @@ class ProductController extends GetxController {
       final favoriteDoc = favoriteCollection.doc(_favoriteDocumentId(product));
       if (product.isFavorite) {
         await favoriteDoc.set({
+          'productId': product.id ?? _productDocumentId(product),
           'productName': product.name,
           'productType': product.type.name,
           'price': product.price,
           'off': product.off,
-          'imagePath': product.images.first,
+          'imagePath': product.images.isNotEmpty ? product.images[0] : null,
           'createdAt': FieldValue.serverTimestamp(),
         });
       } else {
@@ -198,6 +254,7 @@ class ProductController extends GetxController {
 
   Future<void> getFavoriteItems() async {
     _showingFavorites = true;
+    await fetchProductsFromFirestore();
     await syncFavoritesFromFirestore();
     filteredProducts.assignAll(
       allProducts.where((item) => item.isFavorite),
@@ -229,6 +286,7 @@ class ProductController extends GetxController {
 
   Future<void> getAllItems() async {
     _showingFavorites = false;
+    await fetchProductsFromFirestore();
     await syncFavoritesFromFirestore();
     _searchQuery = '';
     _selectedType = ProductType.all;

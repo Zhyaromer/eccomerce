@@ -62,8 +62,8 @@ class CartScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                         child: Padding(
                           padding: const EdgeInsets.all(5),
-                          child: Image.asset(
-                            product.images[0],
+                          child: Image.network(
+                            product.images.isNotEmpty ? product.images[0] : '',
                             width: 100,
                             height: 90,
                           ),

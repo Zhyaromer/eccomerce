@@ -163,7 +163,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                     ),
                   ),
                   const Spacer(),
-                  Image.asset(
+                  Image.network(
                     AppData.recommendedProducts[index].imagePath,
                     height: 125,
                     fit: BoxFit.cover,
@@ -241,6 +241,49 @@ class _ProductListScreenState extends State<ProductListScreen> {
     );
   }
 
+  Widget _loadingProductsState() {
+    return const Padding(
+      padding: EdgeInsets.only(top: 40),
+      child: Center(
+        child: CircularProgressIndicator(
+          color: AppColor.darkOrange,
+        ),
+      ),
+    );
+  }
+
+  Widget _productsErrorState(String message) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 34),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFECEC),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 42,
+            color: Colors.redAccent,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Could not load products',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -260,6 +303,14 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 _topCategoriesListView(),
                 GetBuilder(
                   builder: (ProductController controller) {
+                    if (controller.isLoadingProducts) {
+                      return _loadingProductsState();
+                    }
+
+                    if (controller.productsError != null) {
+                      return _productsErrorState(controller.productsError!);
+                    }
+
                     if (controller.filteredProducts.isEmpty) {
                       return _emptySearchState();
                     }
