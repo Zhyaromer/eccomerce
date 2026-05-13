@@ -2,8 +2,6 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:e_commerce_flutter/core/app_color.dart';
 import 'package:e_commerce_flutter/src/model/product.dart';
-import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:e_commerce_flutter/src/view/widget/carousel_slider.dart';
 import 'package:e_commerce_flutter/src/controller/product_controller.dart';
 
@@ -40,30 +38,6 @@ class ProductDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _ratingBar(BuildContext context) {
-    return Wrap(
-      spacing: 30,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        RatingBar.builder(
-          initialRating: product.rating,
-          direction: Axis.horizontal,
-          itemBuilder: (_, __) => const FaIcon(
-            FontAwesomeIcons.solidStar,
-            color: Colors.amber,
-          ),
-          onRatingUpdate: (_) {},
-        ),
-        Text(
-          "(4500 Reviews)",
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w300,
-              ),
-        )
-      ],
-    );
-  }
-
   Widget productSizesListView() {
     return ListView.builder(
       scrollDirection: Axis.horizontal,
@@ -76,7 +50,9 @@ class ProductDetailScreen extends StatelessWidget {
             alignment: Alignment.center,
             width: controller.isNominal(product) ? 40 : 70,
             decoration: BoxDecoration(
-              color: controller.sizeType(product)[index].isSelected == false ? Colors.white : AppColor.lightOrange,
+              color: controller.sizeType(product)[index].isSelected == false
+                  ? Colors.white
+                  : AppColor.lightOrange,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: Colors.grey,
@@ -123,15 +99,20 @@ class ProductDetailScreen extends StatelessWidget {
                       children: [
                         Text(
                           product.name,
-                          style: Theme.of(context).textTheme.displayMedium,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
                         ),
                         const SizedBox(height: 10),
-                        _ratingBar(context),
                         const SizedBox(height: 10),
                         Row(
                           children: [
                             Text(
-                              product.off != null ? "\$${product.off}" : "\$${product.price}",
+                              product.off != null
+                                  ? "\$${product.off}"
+                                  : "\$${product.price}",
                               style: Theme.of(context).textTheme.displayLarge,
                             ),
                             const SizedBox(width: 3),
@@ -141,7 +122,8 @@ class ProductDetailScreen extends StatelessWidget {
                                 "\$${product.price}",
                                 style: const TextStyle(
                                   decoration: TextDecoration.lineThrough,
-                                  color: Colors.grey,
+                                  decorationColor: Colors.red,
+                                  color: Colors.red,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -149,17 +131,25 @@ class ProductDetailScreen extends StatelessWidget {
                             const Spacer(),
                             GetBuilder<ProductController>(
                               builder: (_) {
-                                final hasStock = product.isAvailable && product.remainingStock > 0;
+                                final hasStock = product.isAvailable &&
+                                    product.remainingStock > 0;
                                 return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: hasStock ? const Color(0xFFEAF7EF) : const Color(0xFFFFECEC),
+                                    color: hasStock
+                                        ? const Color(0xFFEAF7EF)
+                                        : const Color(0xFFFFECEC),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    hasStock ? "${product.remainingStock} in stock" : "Out of stock",
+                                    hasStock
+                                        ? "${product.remainingStock} in stock"
+                                        : "Out of stock",
                                     style: TextStyle(
-                                      color: hasStock ? const Color(0xFF23814D) : Colors.redAccent,
+                                      color: hasStock
+                                          ? const Color(0xFF23814D)
+                                          : Colors.redAccent,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -182,21 +172,31 @@ class ProductDetailScreen extends StatelessWidget {
                             builder: (_) => productSizesListView(),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 30),
                         SizedBox(
                           width: double.infinity,
                           child: GetBuilder<ProductController>(
                             builder: (_) {
-                              final canAdd = product.isAvailable && product.remainingStock > 0;
+                              final canAdd = product.isAvailable &&
+                                  product.remainingStock > 0;
                               return ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 18),
+                                ),
                                 onPressed: canAdd
                                     ? () {
-                                        final wasAdded = controller.addToCart(product);
-                                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        final wasAdded =
+                                            controller.addToCart(product);
+                                        ScaffoldMessenger.of(context)
+                                            .hideCurrentSnackBar();
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
                                             behavior: SnackBarBehavior.floating,
-                                            backgroundColor: wasAdded ? const Color(0xFF1F7A4D) : Colors.redAccent,
+                                            backgroundColor: wasAdded
+                                                ? const Color(0xFF1F7A4D)
+                                                : Colors.redAccent,
                                             content: Text(
                                               wasAdded
                                                   ? "${product.name} added to cart"
@@ -206,7 +206,13 @@ class ProductDetailScreen extends StatelessWidget {
                                         );
                                       }
                                     : null,
-                                child: Text(canAdd ? "Add to cart" : "Out of stock"),
+                                child: Text(
+                                    canAdd ? "Add to cart" : "Out of stock",
+                                    style: TextStyle(
+                                      color: canAdd
+                                          ? Colors.white
+                                          : Colors.white.withValues(alpha: 0.7),
+                                    )),
                               );
                             },
                           ),

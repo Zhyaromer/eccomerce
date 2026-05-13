@@ -225,7 +225,11 @@ class CartScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
               ),
               onPressed: controller.isEmptyCart ? null : () {},
-              child: const Text("Buy Now"),
+              child: const Text("Buy Now",
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white)),
             );
           },
         ),
