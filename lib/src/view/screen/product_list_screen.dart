@@ -112,7 +112,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
         padding: const EdgeInsets.symmetric(vertical: 10),
         shrinkWrap: true,
         scrollDirection: Axis.horizontal,
-        itemCount: AppData.recommendedProducts.length,
+        itemCount: 1,
         itemBuilder: (_, index) {
           return Padding(
             padding: const EdgeInsets.only(right: 20),
