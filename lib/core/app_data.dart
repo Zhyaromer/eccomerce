@@ -81,9 +81,9 @@ class AppData {
       rating: 5,
       sizes: ProductSizeType(
         categorical: [
-          Categorical(CategoricalType.small, true),
-          Categorical(CategoricalType.medium, false),
-          Categorical(CategoricalType.large, false),
+          Categorical(CategoricalType.small, true, price: 190, stock: 3),
+          Categorical(CategoricalType.medium, false, price: 200, stock: 3),
+          Categorical(CategoricalType.large, false, price: 215, stock: 2),
         ],
       ),
       type: ProductType.watch,
@@ -104,8 +104,8 @@ class AppData {
       rating: 4,
       sizes: ProductSizeType(
         numerical: [
-          Numerical('41', true),
-          Numerical('45', false),
+          Numerical('41', true, price: 330, stock: 2),
+          Numerical('45', false, price: 360, stock: 3),
         ],
       ),
       type: ProductType.watch,
@@ -142,9 +142,9 @@ class AppData {
       rating: 3,
       sizes: ProductSizeType(
         numerical: [
-          Numerical('43', true),
-          Numerical('50', false),
-          Numerical('55', false),
+          Numerical('43', true, price: 497, stock: 1),
+          Numerical('50', false, price: 560, stock: 1),
+          Numerical('55', false, price: 620, stock: 1),
         ],
       ),
       type: ProductType.tv,
@@ -163,9 +163,9 @@ class AppData {
       isFavorite: false,
       sizes: ProductSizeType(
         numerical: [
-          Numerical('50', true),
-          Numerical('65', false),
-          Numerical('85', false),
+          Numerical('50', true, price: 498, stock: 1),
+          Numerical('65', false, price: 690, stock: 1),
+          Numerical('85', false, price: 980, stock: 1),
         ],
       ),
       rating: 2,

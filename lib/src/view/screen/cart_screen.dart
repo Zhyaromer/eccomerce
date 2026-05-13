@@ -1,9 +1,11 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'package:e_commerce_flutter/core/extensions.dart';
+import 'package:e_commerce_flutter/src/model/cart_item.dart';
 import 'package:e_commerce_flutter/src/model/product.dart';
 import 'package:e_commerce_flutter/src/view/widget/empty_cart.dart';
 import 'package:e_commerce_flutter/src/controller/product_controller.dart';
+import 'package:e_commerce_flutter/src/view/screen/checkout_screen.dart';
 import 'package:e_commerce_flutter/src/view/animation/animated_switcher_wrapper.dart';
 
 final ProductController controller = Get.put(ProductController());
@@ -24,7 +26,8 @@ class CartScreen extends StatelessWidget {
     return SingleChildScrollView(
       child: Column(
         children: controller.cartProducts.mapWithIndex((index, _) {
-          Product product = controller.cartProducts[index];
+          CartItem cartItem = controller.cartProducts[index];
+          Product product = cartItem.product;
           return Container(
             width: double.infinity,
             margin: const EdgeInsets.all(15),
@@ -84,7 +87,7 @@ class CartScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        controller.getCurrentSize(product),
+                        "Size: ${cartItem.sizeLabel}",
                         style: TextStyle(
                           color: Colors.black.withValues(alpha: 0.5),
                           fontWeight: FontWeight.w400,
@@ -92,7 +95,7 @@ class CartScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        "${product.remainingStock} left",
+                        "${cartItem.stockLimit - cartItem.quantity} left",
                         style: const TextStyle(
                           color: Color(0xFF23814D),
                           fontWeight: FontWeight.w700,
@@ -100,9 +103,7 @@ class CartScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        controller.isPriceOff(product)
-                            ? "\$${product.off}"
-                            : "\$${product.price}",
+                        "\$${cartItem.unitPrice}",
                         style: const TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 23,
@@ -123,7 +124,7 @@ class CartScreen extends StatelessWidget {
                       IconButton(
                         splashRadius: 10.0,
                         onPressed: () =>
-                            controller.decreaseItemQuantity(product),
+                            controller.decreaseItemQuantity(cartItem),
                         icon: const Icon(
                           Icons.remove,
                           color: Color(0xFFEC6813),
@@ -149,7 +150,7 @@ class CartScreen extends StatelessWidget {
                         splashRadius: 10.0,
                         onPressed: () {
                           final didIncrease =
-                              controller.increaseItemQuantity(product);
+                              controller.increaseItemQuantity(cartItem);
                           if (!didIncrease) {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -213,7 +214,7 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget bottomBarButton() {
+  Widget bottomBarButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
       child: Padding(
@@ -224,12 +225,23 @@ class CartScreen extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.all(20),
               ),
-              onPressed: controller.isEmptyCart ? null : () {},
-              child: const Text("Buy Now",
-                  style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white)),
+              onPressed: controller.isEmptyCart
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const CheckoutScreen(),
+                        ),
+                      );
+                    },
+              child: const Text(
+                "Buy Now",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
             );
           },
         ),
@@ -253,7 +265,7 @@ class CartScreen extends StatelessWidget {
                     : const EmptyCart(),
               ),
               bottomBarTitle(),
-              bottomBarButton()
+              bottomBarButton(context)
             ],
           );
         },

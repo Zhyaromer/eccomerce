@@ -43,14 +43,15 @@ class ProductDetailScreen extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       itemCount: controller.sizeType(product).length,
       itemBuilder: (_, index) {
+        final size = controller.sizeType(product)[index];
         return InkWell(
           onTap: () => controller.switchBetweenProductSizes(product, index),
           child: AnimatedContainer(
             margin: const EdgeInsets.only(right: 5, left: 5),
             alignment: Alignment.center,
-            width: controller.isNominal(product) ? 40 : 70,
+            width: controller.isNominal(product) ? 56 : 82,
             decoration: BoxDecoration(
-              color: controller.sizeType(product)[index].isSelected == false
+              color: size.isSelected == false
                   ? Colors.white
                   : AppColor.lightOrange,
               borderRadius: BorderRadius.circular(10),
@@ -60,14 +61,25 @@ class ProductDetailScreen extends StatelessWidget {
               ),
             ),
             duration: const Duration(milliseconds: 300),
-            child: FittedBox(
-              child: Text(
-                controller.sizeType(product)[index].numerical,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 15,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  size.numerical,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
+                if (size.price != null)
+                  Text(
+                    "\$${size.price}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+              ],
             ),
           ),
         );
@@ -109,11 +121,14 @@ class ProductDetailScreen extends StatelessWidget {
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            Text(
-                              product.off != null
-                                  ? "\$${product.off}"
-                                  : "\$${product.price}",
-                              style: Theme.of(context).textTheme.displayLarge,
+                            GetBuilder<ProductController>(
+                              builder: (_) {
+                                return Text(
+                                  "\$${controller.selectedVariantPrice(product)}",
+                                  style:
+                                      Theme.of(context).textTheme.displayLarge,
+                                );
+                              },
                             ),
                             const SizedBox(width: 3),
                             Visibility(
@@ -131,8 +146,12 @@ class ProductDetailScreen extends StatelessWidget {
                             const Spacer(),
                             GetBuilder<ProductController>(
                               builder: (_) {
-                                final hasStock = product.isAvailable &&
-                                    product.remainingStock > 0;
+                                final remainingStock =
+                                    controller.selectedVariantRemainingStock(
+                                  product,
+                                );
+                                final hasStock =
+                                    product.isAvailable && remainingStock > 0;
                                 return Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 12, vertical: 8),
@@ -144,7 +163,7 @@ class ProductDetailScreen extends StatelessWidget {
                                   ),
                                   child: Text(
                                     hasStock
-                                        ? "${product.remainingStock} in stock"
+                                        ? "$remainingStock in stock"
                                         : "Out of stock",
                                     style: TextStyle(
                                       color: hasStock
@@ -167,7 +186,7 @@ class ProductDetailScreen extends StatelessWidget {
                         Text(product.about),
                         const SizedBox(height: 20),
                         SizedBox(
-                          height: 40,
+                          height: 56,
                           child: GetBuilder<ProductController>(
                             builder: (_) => productSizesListView(),
                           ),
@@ -178,7 +197,10 @@ class ProductDetailScreen extends StatelessWidget {
                           child: GetBuilder<ProductController>(
                             builder: (_) {
                               final canAdd = product.isAvailable &&
-                                  product.remainingStock > 0;
+                                  controller.selectedVariantRemainingStock(
+                                        product,
+                                      ) >
+                                      0;
                               return ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   padding:
@@ -199,7 +221,7 @@ class ProductDetailScreen extends StatelessWidget {
                                                 : Colors.redAccent,
                                             content: Text(
                                               wasAdded
-                                                  ? "${product.name} added to cart"
+                                                  ? "${product.name} (${controller.selectedSizeLabel(product)}) added to cart"
                                                   : "No more stock available for ${product.name}",
                                             ),
                                           ),

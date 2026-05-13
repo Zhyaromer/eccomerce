@@ -1,5 +1,6 @@
 import 'package:get/get_rx/src/rx_types/rx_types.dart';
 import 'package:e_commerce_flutter/core/app_data.dart';
+import 'package:e_commerce_flutter/src/model/cart_item.dart';
 import 'package:e_commerce_flutter/src/model/product.dart';
 import 'package:e_commerce_flutter/src/model/numerical.dart';
 import 'package:get/get_state_manager/get_state_manager.dart';
@@ -9,7 +10,7 @@ import 'package:e_commerce_flutter/src/model/product_size_type.dart';
 class ProductController extends GetxController {
   List<Product> allProducts = AppData.products;
   RxList<Product> filteredProducts = AppData.products.obs;
-  RxList<Product> cartProducts = <Product>[].obs;
+  RxList<CartItem> cartProducts = <CartItem>[].obs;
   RxList<ProductCategory> categories = AppData.categories.obs;
   RxInt totalPrice = 0.obs;
   String _searchQuery = '';
@@ -48,34 +49,65 @@ class ProductController extends GetxController {
   }
 
   bool addToCart(Product product) {
+    final selectedSize = selectedSizeLabel(product);
+    final selectedStock = selectedVariantStock(product);
+    final currentVariantQuantity = quantityForVariant(product, selectedSize);
+
     if (!product.isAvailable ||
-        product.stock == 0 ||
-        product.quantity >= product.stock) {
+        selectedStock == 0 ||
+        currentVariantQuantity >= selectedStock) {
       return false;
     }
 
+    CartItem? existingItem;
+    for (final item in cartProducts) {
+      if (item.matches(product, selectedSize)) {
+        existingItem = item;
+        break;
+      }
+    }
+
     product.quantity++;
-    getCartItems();
+    if (existingItem == null) {
+      cartProducts.add(
+        CartItem(
+          product: product,
+          sizeLabel: selectedSize,
+          unitPrice: selectedVariantPrice(product),
+          stockLimit: selectedStock,
+          quantity: 1,
+        ),
+      );
+    } else {
+      existingItem.quantity++;
+      cartProducts.refresh();
+    }
+
     calculateTotalPrice();
     update();
     return true;
   }
 
-  bool increaseItemQuantity(Product product) {
-    if (product.quantity >= product.stock) {
+  bool increaseItemQuantity(CartItem item) {
+    if (item.quantity >= item.stockLimit) {
       return false;
     }
 
-    product.quantity++;
+    item.product.quantity++;
+    item.quantity++;
+    cartProducts.refresh();
     calculateTotalPrice();
     update();
     return true;
   }
 
-  void decreaseItemQuantity(Product product) {
-    product.quantity--;
-    if (product.quantity == 0) {
-      cartProducts.remove(product);
+  void decreaseItemQuantity(CartItem item) {
+    item.product.quantity--;
+    item.quantity--;
+    if (item.quantity == 0) {
+      cartProducts.remove(item);
+    } else {
+      cartProducts.refresh();
     }
     calculateTotalPrice();
     update();
@@ -85,16 +117,22 @@ class ProductController extends GetxController {
 
   bool get isEmptyCart => cartProducts.isEmpty;
 
+  int get cartItemCount {
+    return cartProducts.fold(0, (sum, item) => sum + item.quantity);
+  }
+
+  int quantityForVariant(Product product, String sizeLabel) {
+    return cartProducts
+        .where((item) => item.matches(product, sizeLabel))
+        .fold(0, (sum, item) => sum + item.quantity);
+  }
+
   bool isNominal(Product product) => product.sizes?.numerical != null;
 
   void calculateTotalPrice() {
     totalPrice.value = 0;
     for (var element in cartProducts) {
-      if (isPriceOff(element)) {
-        totalPrice.value += element.quantity * element.off!;
-      } else {
-        totalPrice.value += element.quantity * element.price;
-      }
+      totalPrice.value += element.lineTotal;
     }
   }
 
@@ -105,9 +143,7 @@ class ProductController extends GetxController {
   }
 
   getCartItems() {
-    cartProducts.assignAll(
-      allProducts.where((item) => item.quantity > 0),
-    );
+    cartProducts.refresh();
   }
 
   void showFavoriteItems() {
@@ -116,7 +152,15 @@ class ProductController extends GetxController {
   }
 
   void refreshCart() {
-    getCartItems();
+    calculateTotalPrice();
+    update();
+  }
+
+  void clearCart() {
+    for (final item in cartProducts) {
+      item.product.quantity = 0;
+    }
+    cartProducts.clear();
     calculateTotalPrice();
     update();
   }
@@ -136,7 +180,14 @@ class ProductController extends GetxController {
 
     if (productSize?.numerical != null) {
       for (var element in productSize!.numerical!) {
-        numericalList.add(Numerical(element.numerical, element.isSelected));
+        numericalList.add(
+          Numerical(
+            element.numerical,
+            element.isSelected,
+            price: element.price,
+            stock: element.stock,
+          ),
+        );
       }
     }
 
@@ -146,6 +197,8 @@ class ProductController extends GetxController {
           Numerical(
             element.categorical.name,
             element.isSelected,
+            price: element.price,
+            stock: element.stock,
           ),
         );
       }
@@ -196,5 +249,58 @@ class ProductController extends GetxController {
       }
     }
     return currentSize;
+  }
+
+  String selectedSizeLabel(Product product) {
+    final currentSize = getCurrentSize(product);
+    return currentSize.isEmpty
+        ? 'Default'
+        : currentSize.replaceFirst('Size: ', '');
+  }
+
+  int selectedVariantPrice(Product product) {
+    if (product.sizes?.categorical != null) {
+      for (final element in product.sizes!.categorical!) {
+        if (element.isSelected) {
+          return element.price ?? product.off ?? product.price;
+        }
+      }
+    }
+
+    if (product.sizes?.numerical != null) {
+      for (final element in product.sizes!.numerical!) {
+        if (element.isSelected) {
+          return element.price ?? product.off ?? product.price;
+        }
+      }
+    }
+
+    return product.off ?? product.price;
+  }
+
+  int selectedVariantStock(Product product) {
+    if (product.sizes?.categorical != null) {
+      for (final element in product.sizes!.categorical!) {
+        if (element.isSelected) {
+          return element.stock ?? product.stock;
+        }
+      }
+    }
+
+    if (product.sizes?.numerical != null) {
+      for (final element in product.sizes!.numerical!) {
+        if (element.isSelected) {
+          return element.stock ?? product.stock;
+        }
+      }
+    }
+
+    return product.stock;
+  }
+
+  int selectedVariantRemainingStock(Product product) {
+    final selectedSize = selectedSizeLabel(product);
+    return selectedVariantStock(product) -
+        quantityForVariant(product, selectedSize);
   }
 }

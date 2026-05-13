@@ -51,6 +51,44 @@ class _HomeScreenState extends State<HomeScreen> {
     _refreshSelectedTab(newIndex);
   }
 
+  Widget _cartIconWithBadge(Widget icon) {
+    return GetBuilder<ProductController>(
+      builder: (controller) {
+        final itemCount = controller.cartItemCount;
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            icon,
+            if (itemCount > 0)
+              Positioned(
+                right: -8,
+                top: -8,
+                child: Container(
+                  height: 18,
+                  constraints: const BoxConstraints(minWidth: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Colors.redAccent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    itemCount > 9 ? '9+' : '$itemCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -65,17 +103,25 @@ class _HomeScreenState extends State<HomeScreen> {
               _refreshSelectedTab(index);
             },
             items: AppData.bottomNavBarItems
+                .asMap()
+                .entries
                 .map(
-                  (item) => BottomBarItem(
-                    backgroundColor: item.activeColor,
-                    icon: item.icon,
-                    title: Text(
-                      item.title,
-                      style: TextStyle(
-                        color: item.activeColor,
+                  (entry) {
+                    final item = entry.value;
+
+                    return BottomBarItem(
+                      backgroundColor: item.activeColor,
+                      icon: entry.key == 2
+                          ? _cartIconWithBadge(item.icon)
+                          : item.icon,
+                      title: Text(
+                        item.title,
+                        style: TextStyle(
+                          color: item.activeColor,
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 )
                 .toList(),
             option: BubbleBarOptions(
