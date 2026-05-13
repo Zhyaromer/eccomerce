@@ -21,6 +21,7 @@ class AppData {
       name: 'Samsung Galaxy A53 5G',
       price: 460,
       isAvailable: true,
+      stock: 6,
       off: 300,
       quantity: 0,
       images: [
@@ -36,6 +37,7 @@ class AppData {
       name: 'Samsung Galaxy Tab S7 FE',
       price: 380,
       isAvailable: false,
+      stock: 0,
       off: 220,
       quantity: 0,
       images: [
@@ -51,6 +53,7 @@ class AppData {
       name: 'Samsung Galaxy Tab S8+',
       price: 650,
       isAvailable: true,
+      stock: 4,
       off: null,
       quantity: 0,
       images: [
@@ -66,6 +69,7 @@ class AppData {
       name: 'Samsung Galaxy Watch 4',
       price: 229,
       isAvailable: true,
+      stock: 8,
       off: 200,
       quantity: 0,
       images: [
@@ -88,6 +92,7 @@ class AppData {
       name: 'Apple Watch 7',
       price: 330,
       isAvailable: true,
+      stock: 5,
       off: null,
       quantity: 0,
       images: [
@@ -109,6 +114,7 @@ class AppData {
       name: 'Beats studio 3',
       price: 230,
       isAvailable: true,
+      stock: 7,
       off: null,
       quantity: 0,
       images: [
@@ -125,6 +131,7 @@ class AppData {
       name: 'Samsung Q60 A',
       price: 497,
       isAvailable: true,
+      stock: 3,
       off: null,
       quantity: 0,
       images: [
@@ -146,6 +153,7 @@ class AppData {
       name: 'Sony x 80 J',
       price: 498,
       isAvailable: true,
+      stock: 2,
       off: null,
       quantity: 0,
       images: [
@@ -169,6 +177,7 @@ class AppData {
     ProductCategory(
       type: ProductType.all,
       icon: Icons.all_inclusive,
+      isSelected: true,
     ),
     ProductCategory(
       type: ProductType.mobile,

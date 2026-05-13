@@ -12,20 +12,33 @@ class ProductController extends GetxController {
   RxList<Product> cartProducts = <Product>[].obs;
   RxList<ProductCategory> categories = AppData.categories.obs;
   RxInt totalPrice = 0.obs;
+  String _searchQuery = '';
+  ProductType _selectedType = ProductType.all;
 
   void filterItemsByCategory(int index) {
     for (ProductCategory element in categories) {
       element.isSelected = false;
     }
     categories[index].isSelected = true;
+    _selectedType = categories[index].type;
+    _applyFilters();
+  }
 
-    if (categories[index].type == ProductType.all) {
-      filteredProducts.assignAll(allProducts);
-    } else {
-      filteredProducts.assignAll(allProducts.where((item) {
-        return item.type == categories[index].type;
-      }).toList());
-    }
+  void searchProducts(String query) {
+    _searchQuery = query.trim().toLowerCase();
+    _applyFilters();
+  }
+
+  void _applyFilters() {
+    filteredProducts.assignAll(allProducts.where((item) {
+      final matchesCategory =
+          _selectedType == ProductType.all || item.type == _selectedType;
+      final matchesSearch = _searchQuery.isEmpty ||
+          item.name.toLowerCase().contains(_searchQuery) ||
+          item.type.name.toLowerCase().contains(_searchQuery);
+
+      return matchesCategory && matchesSearch;
+    }).toList());
     update();
   }
 
@@ -34,21 +47,36 @@ class ProductController extends GetxController {
     update();
   }
 
-  void addToCart(Product product) {
+  bool addToCart(Product product) {
+    if (!product.isAvailable ||
+        product.stock == 0 ||
+        product.quantity >= product.stock) {
+      return false;
+    }
+
     product.quantity++;
-    cartProducts.add(product);
-    cartProducts.assignAll(cartProducts);
+    getCartItems();
     calculateTotalPrice();
+    update();
+    return true;
   }
 
-  void increaseItemQuantity(Product product) {
+  bool increaseItemQuantity(Product product) {
+    if (product.quantity >= product.stock) {
+      return false;
+    }
+
     product.quantity++;
     calculateTotalPrice();
     update();
+    return true;
   }
 
   void decreaseItemQuantity(Product product) {
     product.quantity--;
+    if (product.quantity == 0) {
+      cartProducts.remove(product);
+    }
     calculateTotalPrice();
     update();
   }
@@ -82,8 +110,24 @@ class ProductController extends GetxController {
     );
   }
 
+  void showFavoriteItems() {
+    getFavoriteItems();
+    update();
+  }
+
+  void refreshCart() {
+    getCartItems();
+    calculateTotalPrice();
+    update();
+  }
+
   getAllItems() {
-    filteredProducts.assignAll(allProducts);
+    _searchQuery = '';
+    _selectedType = ProductType.all;
+    for (ProductCategory element in categories) {
+      element.isSelected = element.type == ProductType.all;
+    }
+    _applyFilters();
   }
 
   List<Numerical> sizeType(Product product) {

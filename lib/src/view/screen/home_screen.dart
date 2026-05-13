@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:e_commerce_flutter/core/app_data.dart';
 import 'package:stylish_bottom_bar/stylish_bottom_bar.dart';
 import 'package:e_commerce_flutter/src/view/screen/cart_screen.dart';
 import 'package:e_commerce_flutter/src/view/screen/profile_screen.dart';
 import 'package:e_commerce_flutter/src/view/screen/favorite_screen.dart';
 import 'package:e_commerce_flutter/src/view/screen/product_list_screen.dart';
+import 'package:e_commerce_flutter/src/controller/product_controller.dart';
 import 'package:e_commerce_flutter/src/view/animation/page_transition_switcher_wrapper.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -23,6 +25,31 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int newIndex = 0;
+  final ProductController _productController = Get.put(ProductController());
+
+  void _refreshSelectedTab(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || newIndex != index) return;
+
+      switch (index) {
+        case 0:
+          _productController.getAllItems();
+          break;
+        case 1:
+          _productController.showFavoriteItems();
+          break;
+        case 2:
+          _productController.refreshCart();
+          break;
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshSelectedTab(newIndex);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: (index) {
               newIndex = index;
               setState(() {});
+              _refreshSelectedTab(index);
             },
             items: AppData.bottomNavBarItems
                 .map(

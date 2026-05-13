@@ -30,10 +30,10 @@ class ProductDetailScreen extends StatelessWidget {
       height: height * 0.42,
       width: width,
       decoration: const BoxDecoration(
-        color: Color(0xFFE5E6E8),
+        color: Color(0xFFF1F2F4),
         borderRadius: BorderRadius.only(
-          bottomRight: Radius.circular(200),
-          bottomLeft: Radius.circular(200),
+          bottomRight: Radius.circular(80),
+          bottomLeft: Radius.circular(80),
         ),
       ),
       child: CarouselSlider(items: product.images),
@@ -147,10 +147,25 @@ class ProductDetailScreen extends StatelessWidget {
                               ),
                             ),
                             const Spacer(),
-                            Text(
-                              product.isAvailable ? "Available in stock" : "Not available",
-                              style: const TextStyle(fontWeight: FontWeight.w500),
-                            )
+                            GetBuilder<ProductController>(
+                              builder: (_) {
+                                final hasStock = product.isAvailable && product.remainingStock > 0;
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: hasStock ? const Color(0xFFEAF7EF) : const Color(0xFFFFECEC),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    hasStock ? "${product.remainingStock} in stock" : "Out of stock",
+                                    style: TextStyle(
+                                      color: hasStock ? const Color(0xFF23814D) : Colors.redAccent,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ],
                         ),
                         const SizedBox(height: 30),
@@ -170,9 +185,30 @@ class ProductDetailScreen extends StatelessWidget {
                         const SizedBox(height: 20),
                         SizedBox(
                           width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: product.isAvailable ? () => controller.addToCart(product) : null,
-                            child: const Text("Add to cart"),
+                          child: GetBuilder<ProductController>(
+                            builder: (_) {
+                              final canAdd = product.isAvailable && product.remainingStock > 0;
+                              return ElevatedButton(
+                                onPressed: canAdd
+                                    ? () {
+                                        final wasAdded = controller.addToCart(product);
+                                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            behavior: SnackBarBehavior.floating,
+                                            backgroundColor: wasAdded ? const Color(0xFF1F7A4D) : Colors.redAccent,
+                                            content: Text(
+                                              wasAdded
+                                                  ? "${product.name} added to cart"
+                                                  : "No more stock available for ${product.name}",
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    : null,
+                                child: Text(canAdd ? "Add to cart" : "Out of stock"),
+                              );
+                            },
                           ),
                         )
                       ],

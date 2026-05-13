@@ -16,7 +16,7 @@ class ProductGridView extends StatelessWidget {
 
   Widget _gridItemHeader(Product product, int index) {
     return Padding(
-      padding: const EdgeInsets.all(10.0),
+      padding: const EdgeInsets.all(8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -31,7 +31,7 @@ class ProductGridView extends StatelessWidget {
               height: 30,
               alignment: Alignment.center,
               child: const Text(
-                "30% OFF",
+                "Sale",
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -52,12 +52,12 @@ class ProductGridView extends StatelessWidget {
 
   Widget _gridItemBody(Product product) {
     return Container(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.fromLTRB(15, 38, 15, 84),
       decoration: BoxDecoration(
-        color: const Color(0xFFE5E6E8),
-        borderRadius: BorderRadius.circular(20),
+        color: const Color(0xFFF0F1F3),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Image.asset(product.images[0], scale: 3),
+      child: Image.asset(product.images[0], fit: BoxFit.contain),
     );
   }
 
@@ -65,8 +65,8 @@ class ProductGridView extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Container(
-        padding: const EdgeInsets.all(10),
-        height: 70,
+        padding: const EdgeInsets.all(12),
+        height: 86,
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
@@ -84,32 +84,57 @@ class ProductGridView extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
                 style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
               ),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 10),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  product.off != null
-                      ? "\$${product.off}"
-                      : "\$${product.price}",
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(width: 3),
-                Visibility(
-                  visible: product.off != null ? true : false,
-                  child: Text(
-                    "\$${product.price}",
-                    style: const TextStyle(
-                      decoration: TextDecoration.lineThrough,
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
+                Row(
+                  children: [
+                    Text(
+                      product.off != null
+                          ? "\$${product.off}"
+                          : "\$${product.price}",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
                     ),
+                    const SizedBox(width: 5),
+                    Visibility(
+                      visible: product.off != null ? true : false,
+                      child: Text(
+                        "\$${product.price}",
+                        style: TextStyle(
+                          fontSize: 12,
+                          decoration: TextDecoration.lineThrough,
+                          decorationColor: Colors.red,
+                          color:
+                              product.off != null ? Colors.red : Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  product.isAvailable
+                      ? '${product.remainingStock} left'
+                      : 'Sold out',
+                  style: TextStyle(
+                    color: product.isAvailable
+                        ? const Color(0xFF23814D)
+                        : Colors.redAccent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
                   ),
-                )
+                ),
               ],
             )
           ],

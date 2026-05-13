@@ -10,29 +10,30 @@ enum AppbarActionType { leading, trailing }
 
 final ProductController controller = Get.put(ProductController());
 
-class ProductListScreen extends StatelessWidget {
+class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
 
-  Widget appBarActionButton(AppbarActionType type) {
-    IconData icon = Icons.ac_unit_outlined;
+  @override
+  State<ProductListScreen> createState() => _ProductListScreenState();
+}
 
-    if (type == AppbarActionType.trailing) {
-      icon = Icons.search;
-    }
+class _ProductListScreenState extends State<ProductListScreen> {
+  final TextEditingController _searchController = TextEditingController();
 
-    return Container(
-      margin: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        color: AppColor.lightGrey,
-      ),
-      child: IconButton(
-        padding: const EdgeInsets.all(8),
-        constraints: const BoxConstraints(),
-        onPressed: () {},
-        icon: Icon(icon, color: Colors.black),
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        controller.getAllItems();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   PreferredSize get _appBar {
@@ -42,12 +43,61 @@ class ProductListScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              appBarActionButton(AppbarActionType.leading),
-              appBarActionButton(AppbarActionType.trailing),
+              Text(
+                "Ibrahim Ahmed Shop",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _searchField() {
+    return Container(
+      height: 54,
+      margin: const EdgeInsets.only(top: 18, bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) {
+          controller.searchProducts(value);
+        },
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Search products',
+          prefixIcon:
+              const Icon(Icons.search_rounded, color: AppColor.darkGrey),
+          suffixIcon: _searchController.text.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Clear search',
+                  onPressed: () {
+                    _searchController.clear();
+                    controller.searchProducts('');
+                  },
+                  icon: const Icon(Icons.close_rounded),
+                ),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
       ),
     );
@@ -79,8 +129,11 @@ class ProductListScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          '30% OFF DURING \nCOVID 19',
-                          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                          'Featured deals\nup to 30% off',
+                          style: Theme.of(context)
+                              .textTheme
+                              .displaySmall
+                              ?.copyWith(
                                 color: Colors.white,
                               ),
                         ),
@@ -88,7 +141,8 @@ class ProductListScreen extends StatelessWidget {
                         ElevatedButton(
                           onPressed: () {},
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppData.recommendedProducts[index].buttonBackgroundColor,
+                            backgroundColor: AppData.recommendedProducts[index]
+                                .buttonBackgroundColor,
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(horizontal: 18),
                             shape: RoundedRectangleBorder(
@@ -98,7 +152,8 @@ class ProductListScreen extends StatelessWidget {
                           child: Text(
                             "Get Now",
                             style: TextStyle(
-                              color: AppData.recommendedProducts[index].buttonTextColor!,
+                              color: AppData
+                                  .recommendedProducts[index].buttonTextColor!,
                             ),
                           ),
                         )
@@ -127,17 +182,20 @@ class ProductListScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            "Top categories",
+            "Categories",
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           TextButton(
-            onPressed: () {},
+            onPressed: () {
+              _searchController.clear();
+              controller.getAllItems();
+            },
             style: TextButton.styleFrom(foregroundColor: AppColor.darkOrange),
             child: Text(
-              "SEE ALL",
+              "RESET",
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.deepOrange.withValues(alpha: 0.7),
-                  ),
+                  color: Colors.deepOrange.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.w700),
             ),
           )
         ],
@@ -154,10 +212,37 @@ class ProductListScreen extends StatelessWidget {
     );
   }
 
+  Widget _emptySearchState() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 36),
+      decoration: BoxDecoration(
+        color: AppColor.lightGrey.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.search_off_rounded, size: 42, color: AppColor.darkGrey),
+          SizedBox(height: 12),
+          Text(
+            'No products found',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          SizedBox(height: 6),
+          Text(
+            'Try a different name or category.',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    controller.getAllItems();
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F8F8),
       extendBodyBehindAppBar: true,
       appBar: _appBar,
       body: SafeArea(
@@ -167,22 +252,20 @@ class ProductListScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "Hello Sina",
-                  style: Theme.of(context).textTheme.displayLarge,
-                ),
-                Text(
-                  "Lets gets somethings?",
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
+                _searchField(),
                 _recommendedProductListView(context),
                 _topCategoriesHeader(context),
                 _topCategoriesListView(),
                 GetBuilder(
                   builder: (ProductController controller) {
+                    if (controller.filteredProducts.isEmpty) {
+                      return _emptySearchState();
+                    }
+
                     return ProductGridView(
                       items: controller.filteredProducts,
-                      likeButtonPressed: (index) => controller.isFavorite(index),
+                      likeButtonPressed: (index) =>
+                          controller.isFavorite(index),
                       isPriceOff: (product) => controller.isPriceOff(product),
                     );
                   },

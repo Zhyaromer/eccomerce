@@ -14,13 +14,13 @@ class CartScreen extends StatelessWidget {
   PreferredSizeWidget _appBar(BuildContext context) {
     return AppBar(
       title: Text(
-        "My cart",
+        "Cart",
         style: Theme.of(context).textTheme.displayLarge,
       ),
     );
   }
 
-  Widget cartList() {
+  Widget cartList(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
         children: controller.cartProducts.mapWithIndex((index, _) {
@@ -33,8 +33,15 @@ class CartScreen extends StatelessWidget {
               horizontal: 5,
             ),
             decoration: BoxDecoration(
-              color: Colors.grey[200]?.withValues(alpha: 0.6),
-              borderRadius: BorderRadius.circular(10),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Row(
               spacing: 5,
@@ -43,7 +50,7 @@ class CartScreen extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(14),
                       color: ColorExtension.randomColor,
                     ),
                     child: ClipRRect(
@@ -85,7 +92,17 @@ class CartScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        controller.isPriceOff(product) ? "\$${product.off}" : "\$${product.price}",
+                        "${product.remainingStock} left",
+                        style: const TextStyle(
+                          color: Color(0xFF23814D),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        controller.isPriceOff(product)
+                            ? "\$${product.off}"
+                            : "\$${product.price}",
                         style: const TextStyle(
                           fontWeight: FontWeight.w900,
                           fontSize: 23,
@@ -96,8 +113,8 @@ class CartScreen extends StatelessWidget {
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
+                    color: const Color(0xFFF4F4F4),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -105,7 +122,8 @@ class CartScreen extends StatelessWidget {
                     children: [
                       IconButton(
                         splashRadius: 10.0,
-                        onPressed: () => controller.decreaseItemQuantity(product),
+                        onPressed: () =>
+                            controller.decreaseItemQuantity(product),
                         icon: const Icon(
                           Icons.remove,
                           color: Color(0xFFEC6813),
@@ -129,7 +147,22 @@ class CartScreen extends StatelessWidget {
                       ),
                       IconButton(
                         splashRadius: 10.0,
-                        onPressed: () => controller.increaseItemQuantity(product),
+                        onPressed: () {
+                          final didIncrease =
+                              controller.increaseItemQuantity(product);
+                          if (!didIncrease) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.redAccent,
+                                content: Text(
+                                  "Only ${product.stock} available for ${product.name}",
+                                ),
+                              ),
+                            );
+                          }
+                        },
                         icon: const Icon(Icons.add, color: Color(0xFFEC6813)),
                       ),
                     ],
@@ -145,8 +178,14 @@ class CartScreen extends StatelessWidget {
 
   Widget bottomBarTitle() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.symmetric(horizontal: 30),
+      margin: const EdgeInsets.only(top: 8, bottom: 15),
+      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: Color(0xFFEDEDED)),
+        ),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -179,10 +218,16 @@ class CartScreen extends StatelessWidget {
       width: double.infinity,
       child: Padding(
         padding: const EdgeInsets.only(left: 30, right: 30, bottom: 20),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(20)),
-          onPressed: controller.isEmptyCart ? null : () {},
-          child: const Text("Buy Now"),
+        child: GetBuilder<ProductController>(
+          builder: (_) {
+            return ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.all(20),
+              ),
+              onPressed: controller.isEmptyCart ? null : () {},
+              child: const Text("Buy Now"),
+            );
+          },
         ),
       ),
     );
@@ -190,18 +235,24 @@ class CartScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    controller.getCartItems();
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F8F8),
       appBar: _appBar(context),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: !controller.isEmptyCart ? cartList() : const EmptyCart(),
-          ),
-          bottomBarTitle(),
-          bottomBarButton()
-        ],
+      body: GetBuilder<ProductController>(
+        builder: (_) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: !controller.isEmptyCart
+                    ? cartList(context)
+                    : const EmptyCart(),
+              ),
+              bottomBarTitle(),
+              bottomBarButton()
+            ],
+          );
+        },
       ),
     );
   }

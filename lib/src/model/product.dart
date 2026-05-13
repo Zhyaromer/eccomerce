@@ -9,6 +9,7 @@ class Product {
   int? off;
   String about;
   bool isAvailable;
+  int stock;
   ProductSizeType? sizes;
   int _quantity;
   List<String> images;
@@ -19,8 +20,10 @@ class Product {
   int get quantity => _quantity;
 
   set quantity(int newQuantity) {
-    if (newQuantity >= 0) _quantity = newQuantity;
+    if (newQuantity >= 0 && newQuantity <= stock) _quantity = newQuantity;
   }
+
+  int get remainingStock => stock - _quantity;
 
   Product({
     this.sizes,
@@ -28,6 +31,7 @@ class Product {
     required this.name,
     required this.price,
     required this.isAvailable,
+    required this.stock,
     required this.off,
     required int quantity,
     required this.images,

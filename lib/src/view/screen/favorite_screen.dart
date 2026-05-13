@@ -9,7 +9,6 @@ class FavoriteScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    controller.getFavoriteItems();
     return Scaffold(
       appBar: AppBar(
         title: Text(
