@@ -47,28 +47,28 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBM65IhbmB7bhD4YKgPUsK58rqtCar1PeE',
-    appId: '1:846887607030:web:319cde79b97f0bcb206ad7',
-    messagingSenderId: '846887607030',
-    projectId: 'shop-ed9f1',
-    authDomain: 'shop-ed9f1.firebaseapp.com',
-    storageBucket: 'shop-ed9f1.firebasestorage.app',
+    apiKey: 'AIzaSyCJ6jQ03fUxOCfY-tgpEsynj67UK6boiMw',
+    appId: '1:714509820044:web:a00e6d3c81ec28a27d9ba9',
+    messagingSenderId: '714509820044',
+    projectId: 'shop-60346',
+    authDomain: 'shop-60346.firebaseapp.com',
+    storageBucket: 'shop-60346.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyA1-ULmc2Z7_7Ve4A_uVGx1dwdc2lZtbUc',
-    appId: '1:846887607030:android:6134554d4a3c997c206ad7',
-    messagingSenderId: '846887607030',
-    projectId: 'shop-ed9f1',
-    storageBucket: 'shop-ed9f1.firebasestorage.app',
+    apiKey: 'AIzaSyBUehrrnGXap6UPe4romwBpvKAWOxWDQBk',
+    appId: '1:714509820044:android:e77855655792aacd7d9ba9',
+    messagingSenderId: '714509820044',
+    projectId: 'shop-60346',
+    storageBucket: 'shop-60346.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDtUt-OKW4Cx2kf2hB7iomBEVYJODSF1yU',
-    appId: '1:846887607030:ios:141c04cca3c18d97206ad7',
-    messagingSenderId: '846887607030',
-    projectId: 'shop-ed9f1',
-    storageBucket: 'shop-ed9f1.firebasestorage.app',
+    apiKey: 'AIzaSyATX7zo9oGsU6iPfm5iw9_sV_mBmN5gY1o',
+    appId: '1:714509820044:ios:5e8b03033a9c3ceb7d9ba9',
+    messagingSenderId: '714509820044',
+    projectId: 'shop-60346',
+    storageBucket: 'shop-60346.firebasestorage.app',
     iosBundleId: 'com.sinasys.eCommerceFlutter',
   );
 }
