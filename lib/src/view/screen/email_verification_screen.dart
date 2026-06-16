@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:e_commerce_flutter/core/app_color.dart';
+import 'package:e_commerce_flutter/src/service/auth_destination.dart';
 import 'package:e_commerce_flutter/src/view/screen/auth_screen.dart';
-import 'package:e_commerce_flutter/src/view/screen/home_screen.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   const EmailVerificationScreen({super.key});
@@ -59,8 +59,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     setState(() => _isChecking = false);
 
     if (refreshedUser?.emailVerified == true) {
+      final destination = await AuthDestination.forSignedInUser(refreshedUser!);
+      if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => destination),
         (_) => false,
       );
       return;

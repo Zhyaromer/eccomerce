@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:e_commerce_flutter/core/app_color.dart';
+import 'package:e_commerce_flutter/src/service/auth_destination.dart';
 import 'package:e_commerce_flutter/src/view/screen/email_verification_screen.dart';
 import 'package:e_commerce_flutter/src/view/screen/forgot_password_screen.dart';
-import 'package:e_commerce_flutter/src/view/screen/home_screen.dart';
 
 enum AuthMode { signIn, signUp }
 
@@ -132,6 +131,7 @@ class _AuthScreenState extends State<AuthScreen> {
           'email': _emailController.text.trim(),
           'phone': _phoneController.text.trim(),
           'address': _addressController.text.trim(),
+          'role': 'customer',
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         });
@@ -171,9 +171,9 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (!mounted) return;
     final user = _auth.currentUser;
-    final destination = user != null && user.emailVerified
-        ? const HomeScreen()
-        : const EmailVerificationScreen();
+    final destination = user == null
+        ? const EmailVerificationScreen()
+        : await AuthDestination.forSignedInUser(user);
 
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => destination),

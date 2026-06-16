@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:e_commerce_flutter/core/app_color.dart';
+import 'package:e_commerce_flutter/src/service/auth_destination.dart';
 import 'package:e_commerce_flutter/src/view/screen/email_verification_screen.dart';
-import 'package:e_commerce_flutter/src/view/screen/home_screen.dart';
 import 'package:e_commerce_flutter/src/view/screen/welcome_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -31,7 +31,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (refreshedUser == null) {
       nextScreen = const WelcomeScreen();
     } else if (refreshedUser.emailVerified) {
-      nextScreen = const HomeScreen();
+      nextScreen = await AuthDestination.forSignedInUser(refreshedUser);
     } else {
       nextScreen = const EmailVerificationScreen();
     }
