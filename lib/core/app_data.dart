@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:e_commerce_flutter/src/model/product.dart';
 import 'package:e_commerce_flutter/src/model/numerical.dart';
 import 'package:e_commerce_flutter/src/model/categorical.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:e_commerce_flutter/src/model/product_category.dart';
 import 'package:e_commerce_flutter/src/model/product_size_type.dart';
 import 'package:e_commerce_flutter/src/model/recommended_product.dart';
@@ -174,31 +173,12 @@ class AppData {
   ];
 
   static List<ProductCategory> categories = [
-    ProductCategory(
-      type: ProductType.all,
-      icon: Icons.all_inclusive,
-      isSelected: true,
-    ),
-    ProductCategory(
-      type: ProductType.mobile,
-      icon: FontAwesomeIcons.mobileScreenButton,
-    ),
-    ProductCategory(
-      type: ProductType.watch,
-      icon: Icons.watch,
-    ),
-    ProductCategory(
-      type: ProductType.tablet,
-      icon: FontAwesomeIcons.tablet,
-    ),
-    ProductCategory(
-      type: ProductType.headphone,
-      icon: Icons.headphones,
-    ),
-    ProductCategory(
-      type: ProductType.tv,
-      icon: Icons.tv,
-    ),
+    ProductCategory.all(),
+    ProductCategory(id: 'mobile', name: 'Mobile'),
+    ProductCategory(id: 'watch', name: 'Watch'),
+    ProductCategory(id: 'tablet', name: 'Tablet'),
+    ProductCategory(id: 'headphone', name: 'Headphone'),
+    ProductCategory(id: 'tv', name: 'TV'),
   ];
 
   static List<Color> randomColors = [

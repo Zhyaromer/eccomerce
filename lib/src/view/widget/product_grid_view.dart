@@ -55,14 +55,41 @@ class ProductGridView extends StatelessWidget {
   }
 
   Widget _gridItemBody(Product product) {
+    final image = product.images.isEmpty ? '' : product.images.first;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(15, 38, 15, 84),
       decoration: BoxDecoration(
         color: const Color(0xFFF0F1F3),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Image.network(product.images[0], fit: BoxFit.contain),
+      child: _productImage(image),
     );
+  }
+
+  Widget _productImage(String image) {
+    if (image.isEmpty) {
+      return const Icon(Icons.image_not_supported_outlined, size: 44);
+    }
+
+    final isNetworkImage =
+        image.startsWith('http://') || image.startsWith('https://');
+
+    return isNetworkImage
+        ? Image.network(
+            image,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) {
+              return const Icon(Icons.image_not_supported_outlined, size: 44);
+            },
+          )
+        : Image.asset(
+            image,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) {
+              return const Icon(Icons.image_not_supported_outlined, size: 44);
+            },
+          );
   }
 
   Widget _gridItemFooter(Product product, BuildContext context) {

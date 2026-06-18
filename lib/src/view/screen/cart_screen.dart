@@ -13,6 +13,33 @@ final ProductController controller = Get.put(ProductController());
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
+  Widget _productImage(String image) {
+    if (image.isEmpty) {
+      return const Icon(Icons.image_not_supported_outlined, size: 44);
+    }
+
+    final isNetworkImage =
+        image.startsWith('http://') || image.startsWith('https://');
+
+    return isNetworkImage
+        ? Image.network(
+            image,
+            width: 100,
+            height: 90,
+            errorBuilder: (_, __, ___) {
+              return const Icon(Icons.image_not_supported_outlined, size: 44);
+            },
+          )
+        : Image.asset(
+            image,
+            width: 100,
+            height: 90,
+            errorBuilder: (_, __, ___) {
+              return const Icon(Icons.image_not_supported_outlined, size: 44);
+            },
+          );
+  }
+
   PreferredSizeWidget _appBar(BuildContext context) {
     return AppBar(
       title: Text(
@@ -62,10 +89,8 @@ class CartScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                         child: Padding(
                           padding: const EdgeInsets.all(5),
-                          child: Image.network(
+                          child: _productImage(
                             product.images.isNotEmpty ? product.images[0] : '',
-                            width: 100,
-                            height: 90,
                           ),
                         ),
                       ),

@@ -1,6 +1,4 @@
-import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:e_commerce_flutter/src/model/product_category.dart';
 
 class ListItemSelector extends StatefulWidget {
@@ -20,26 +18,19 @@ class ListItemSelector extends StatefulWidget {
 class _ListItemSelectorState extends State<ListItemSelector> {
   Widget item(ProductCategory item, int index) {
     return Tooltip(
-      message: item.type.name.capitalizeFirst,
+      message: item.name,
       child: AnimatedContainer(
-        margin: const EdgeInsets.only(left: 5),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         duration: const Duration(milliseconds: 500),
-        width: 50,
-        height: 100,
+        height: 44,
         decoration: BoxDecoration(
           color: item.isSelected == false
               ? const Color(0xFFE5E6E8)
               : const Color(0xFFf16b26),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: IconButton(
-          splashRadius: 0.1,
-          icon: FaIcon(
-            item.icon,
-            color: item.isSelected == false
-                ? const Color(0xFFA6A3A0)
-                : Colors.white,
-          ),
+        child: TextButton(
           onPressed: () {
             widget.onItemPressed(index);
             for (var element in widget.categories) {
@@ -49,6 +40,13 @@ class _ListItemSelectorState extends State<ListItemSelector> {
             item.isSelected = true;
             setState(() {});
           },
+          child: Text(
+            item.name,
+            selectionColor: item.isSelected == false
+                ? const Color(0xFFA6A3A0)
+                : Colors.white,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
         ),
       ),
     );

@@ -13,10 +13,12 @@ class ProductController extends GetxController {
   List<Product> allProducts = [];
   RxList<Product> filteredProducts = <Product>[].obs;
   RxList<CartItem> cartProducts = <CartItem>[].obs;
-  RxList<ProductCategory> categories = AppData.categories.obs;
+  RxList<ProductCategory> categories = <ProductCategory>[
+    ProductCategory.all(),
+  ].obs;
   RxInt totalPrice = 0.obs;
   String _searchQuery = '';
-  ProductType _selectedType = ProductType.all;
+  String _selectedCategoryId = 'all';
   bool _showingFavorites = false;
   bool isLoadingProducts = false;
   String? productsError;
@@ -43,6 +45,61 @@ class ProductController extends GetxController {
         .collection('users')
         .doc(user.uid)
         .collection('favorites');
+  }
+
+  Future<void> fetchCategoriesFromFirestore() async {
+    final selectedCategoryId = _selectedCategoryId;
+
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('categories').get();
+      final docs = snapshot.docs.toList()
+        ..sort((a, b) {
+          final aName = a.data()['name']?.toString() ?? a.id;
+          final bName = b.data()['name']?.toString() ?? b.id;
+          return aName.compareTo(bName);
+        });
+
+      final loadedCategories = docs
+          .map(
+            (doc) => ProductCategory.fromMap(
+              doc.id,
+              doc.data(),
+              isSelected: doc.id == selectedCategoryId,
+            ),
+          )
+          .toList();
+
+      final productCategories = allProducts
+          .map((product) => product.category)
+          .where((category) => category.isNotEmpty)
+          .where(
+            (category) =>
+                loadedCategories.every((item) => item.id != category),
+          )
+          .map(
+            (category) => ProductCategory(
+              id: category,
+              name: category,
+              isSelected: category == selectedCategoryId,
+            ),
+          );
+
+      final nextCategories = [
+        ProductCategory.all()..isSelected = selectedCategoryId == 'all',
+        ...loadedCategories,
+        ...productCategories,
+      ];
+
+      categories.assignAll(nextCategories);
+    } on FirebaseException {
+      categories.assignAll(
+        AppData.categories.map((category) {
+          category.isSelected = category.id == selectedCategoryId;
+          return category;
+        }),
+      );
+    }
   }
 
   Future<void> syncFavoritesFromFirestore() async {
@@ -109,7 +166,7 @@ class ProductController extends GetxController {
       element.isSelected = false;
     }
     categories[index].isSelected = true;
-    _selectedType = categories[index].type;
+    _selectedCategoryId = categories[index].id;
     _applyFilters();
   }
 
@@ -122,9 +179,10 @@ class ProductController extends GetxController {
   void _applyFilters() {
     filteredProducts.assignAll(allProducts.where((item) {
       final matchesCategory =
-          _selectedType == ProductType.all || item.type == _selectedType;
+          _selectedCategoryId == 'all' || item.category == _selectedCategoryId;
       final matchesSearch = _searchQuery.isEmpty ||
           item.name.toLowerCase().contains(_searchQuery) ||
+          item.category.toLowerCase().contains(_searchQuery) ||
           item.type.name.toLowerCase().contains(_searchQuery);
 
       return matchesCategory && matchesSearch;
@@ -144,7 +202,7 @@ class ProductController extends GetxController {
         await favoriteDoc.set({
           'productId': product.id ?? _productDocumentId(product),
           'productName': product.name,
-          'productType': product.type.name,
+          'productType': product.category,
           'price': product.price,
           'off': product.off,
           'imagePath': product.images.isNotEmpty ? product.images[0] : null,
@@ -308,11 +366,12 @@ class ProductController extends GetxController {
   Future<void> getAllItems() async {
     _showingFavorites = false;
     await fetchProductsFromFirestore();
+    await fetchCategoriesFromFirestore();
     await syncFavoritesFromFirestore();
     _searchQuery = '';
-    _selectedType = ProductType.all;
+    _selectedCategoryId = 'all';
     for (ProductCategory element in categories) {
-      element.isSelected = element.type == ProductType.all;
+      element.isSelected = element.id == 'all';
     }
     _applyFilters();
   }

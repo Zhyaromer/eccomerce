@@ -17,6 +17,7 @@ class Product {
   bool isFavorite;
   double rating;
   ProductType type;
+  String category;
 
   int get quantity => _quantity;
 
@@ -40,9 +41,23 @@ class Product {
     required this.isFavorite,
     required this.rating,
     required this.type,
-  }) : _quantity = quantity;
+    String? category,
+  })  : category = category ?? type.name,
+        _quantity = quantity;
 
   factory Product.fromMap(String id, Map<String, dynamic> map) {
+    final images = (map['images'] as List<dynamic>?)
+            ?.whereType<String>()
+            .where((image) => image.trim().isNotEmpty)
+            .toList() ??
+        <String>[];
+    for (final key in ['imageUrl', 'image', 'photoUrl', 'thumbnail']) {
+      final value = map[key]?.toString().trim();
+      if (value != null && value.isNotEmpty && !images.contains(value)) {
+        images.add(value);
+      }
+    }
+
     return Product(
       id: id,
       name: map['name'] as String? ?? '',
@@ -51,7 +66,7 @@ class Product {
       stock: (map['stock'] as num?)?.toInt() ?? 0,
       off: (map['off'] as num?)?.toInt(),
       quantity: 0,
-      images: (map['images'] as List<dynamic>?)?.cast<String>() ?? [],
+      images: images,
       isFavorite: false,
       rating: (map['rating'] as num?)?.toDouble() ?? 0,
       about: map['about'] as String? ?? AppData.dummyText,
@@ -64,6 +79,8 @@ class Product {
         (type) => type.name == map['type'],
         orElse: () => ProductType.mobile,
       ),
+      category: (map['category'] ?? map['type'] ?? ProductType.mobile.name)
+          .toString(),
     );
   }
 
@@ -78,6 +95,7 @@ class Product {
       'images': images,
       'rating': rating,
       'type': type.name,
+      'category': category,
       if (sizes != null) 'sizes': sizes!.toMap(),
       if (sortOrder != null) 'sortOrder': sortOrder,
     };

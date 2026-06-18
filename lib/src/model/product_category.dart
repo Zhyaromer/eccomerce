@@ -1,14 +1,37 @@
-import 'package:e_commerce_flutter/src/model/product.dart';
-import 'package:flutter/material.dart' show IconData;
-
 class ProductCategory {
-  ProductType type;
+  String id;
+  String name;
   bool isSelected;
-  IconData icon;
 
   ProductCategory({
-    required this.type,
+    required this.id,
+    required this.name,
     this.isSelected = false,
-    required this.icon,
   });
+
+  factory ProductCategory.all() {
+    return ProductCategory(
+      id: 'all',
+      name: 'All',
+      isSelected: true,
+    );
+  }
+
+  factory ProductCategory.fromMap(
+    String id,
+    Map<String, dynamic> data, {
+    bool isSelected = false,
+  }) {
+    return ProductCategory(
+      id: id,
+      name: data['name']?.toString() ?? id,
+      isSelected: isSelected,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+    };
+  }
 }

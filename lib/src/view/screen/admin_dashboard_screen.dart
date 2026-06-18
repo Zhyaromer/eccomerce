@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:e_commerce_flutter/core/app_color.dart';
 import 'package:e_commerce_flutter/src/model/numerical.dart';
 import 'package:e_commerce_flutter/src/model/product.dart';
+import 'package:e_commerce_flutter/src/model/product_category.dart';
 import 'package:e_commerce_flutter/src/model/product_size_type.dart';
 import 'package:e_commerce_flutter/src/view/screen/auth_screen.dart';
 
@@ -63,8 +64,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         : normalizedName;
   }
 
-  String _friendlyType(ProductType type) {
-    return type.name[0].toUpperCase() + type.name.substring(1);
+  String _friendlyLabel(String value) {
+    if (value.isEmpty) return 'Category';
+    return value
+        .split(RegExp(r'[-_\s]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => part[0].toUpperCase() + part.substring(1))
+        .join(' ');
+  }
+
+  String _categoryDocumentId(String name) {
+    final normalizedName = name
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
+
+    return normalizedName.isEmpty
+        ? DateTime.now().millisecondsSinceEpoch.toString()
+        : normalizedName;
+  }
+
+  ProductType _legacyTypeForCategory(String category) {
+    return ProductType.values.firstWhere(
+      (type) => type.name == category,
+      orElse: () => ProductType.mobile,
+    );
+  }
+
+  Future<List<ProductCategory>> _loadAdminCategories() async {
+    final snapshot = await _firestore.collection('categories').get();
+    final categories = snapshot.docs
+        .map((doc) => ProductCategory.fromMap(doc.id, doc.data()))
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+
+    return categories;
   }
 
   String _selectedDayLabel() {
@@ -611,10 +645,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final aboutController = TextEditingController(
       text: isEditing ? _field(data, 'about')?.toString() ?? '' : '',
     );
-    var type = ProductType.values.firstWhere(
-      (item) => item.name == _field(data, 'type'),
-      orElse: () => ProductType.mobile,
-    );
+    final categoryOptions = await _loadAdminCategories();
+    final existingCategory =
+        (_field(data, 'category') ?? _field(data, 'type') ?? '').toString();
+    if (existingCategory.isNotEmpty &&
+        categoryOptions.every((category) => category.id != existingCategory)) {
+      categoryOptions.add(
+        ProductCategory(
+          id: existingCategory,
+          name: _friendlyLabel(existingCategory),
+        ),
+      );
+    }
+    if (categoryOptions.isEmpty) {
+      categoryOptions.add(
+        ProductCategory(
+          id: 'uncategorized',
+          name: 'Uncategorized',
+        ),
+      );
+    }
+    var categoryId = categoryOptions.any(
+      (category) => category.id == existingCategory,
+    )
+        ? existingCategory
+        : categoryOptions.first.id;
     var isAvailable = _field(data, 'isAvailable') as bool? ?? true;
     final imageRows = _productImages(data ?? <String, dynamic>{})
         .map((image) => TextEditingController(text: image))
@@ -675,24 +730,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           },
                         ),
                         const SizedBox(height: 12),
-                        DropdownButtonFormField<ProductType>(
-                          value: type,
+                        DropdownButtonFormField<String>(
+                          value: categoryId,
                           decoration: const InputDecoration(
                             labelText: 'Category',
-                            prefixIcon: Icon(Icons.category_outlined),
                           ),
-                          items: ProductType.values
-                              .where((item) => item != ProductType.all)
+                          items: categoryOptions
                               .map(
-                                (item) => DropdownMenuItem(
-                                  value: item,
-                                  child: Text(_friendlyType(item)),
+                                (category) => DropdownMenuItem(
+                                  value: category.id,
+                                  child: Text(category.name),
                                 ),
                               )
                               .toList(),
                           onChanged: (value) {
                             if (value != null) {
-                              setDialogState(() => type = value);
+                              setDialogState(() => categoryId = value);
                             }
                           },
                         ),
@@ -945,7 +998,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       rating: _readDouble(ratingController.text),
                       about: aboutController.text.trim(),
                       sizes: _sizesFromRows(sizeRows),
-                      type: type,
+                      type: _legacyTypeForCategory(categoryId),
+                      category: categoryId,
                     );
 
                     final data = product.toMap();
@@ -1048,7 +1102,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   const SizedBox(height: 18),
                   _detailRow('ID', document.id),
-                  _detailRow('Category', data['type']?.toString() ?? ''),
+                  _detailRow(
+                    'Category',
+                    (data['category'] ?? data['type'] ?? '').toString(),
+                  ),
                   _detailRow('Price', '\$${_readInt(data['price'])}'),
                   _detailRow(
                     'Discount',
@@ -1292,6 +1349,108 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     if (saved == true) {
       _showSnackBar(isEditing ? 'User updated' : 'User profile created');
+    }
+  }
+
+  Future<void> _openCategoryEditor([
+    QueryDocumentSnapshot<Map<String, dynamic>>? document,
+  ]) async {
+    final isEditing = document != null;
+    final data = document?.data();
+    final nameController = TextEditingController(
+      text: _field(data, 'name')?.toString() ?? '',
+    );
+    final formKey = GlobalKey<FormState>();
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(
+                isEditing ? 'Edit category' : 'New category',
+                style: const TextStyle(fontWeight: FontWeight.w900),
+              ),
+              content: SizedBox(
+                width: 480,
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Category name',
+                        ),
+                        validator: (value) {
+                          if ((value ?? '').trim().isEmpty) {
+                            return 'Enter a category name';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (!formKey.currentState!.validate()) return;
+
+                    final name = nameController.text.trim();
+                    final categoryData = <String, dynamic>{
+                      'name': name,
+                      'updatedAt': FieldValue.serverTimestamp(),
+                    };
+                    if (!isEditing) {
+                      categoryData['createdAt'] = FieldValue.serverTimestamp();
+                    }
+
+                    final docId =
+                        isEditing ? document!.id : _categoryDocumentId(name);
+
+                    try {
+                      await _firestore
+                          .collection('categories')
+                          .doc(docId)
+                          .set(categoryData, SetOptions(merge: isEditing));
+                      if (context.mounted) Navigator.pop(context, true);
+                    } on FirebaseException catch (error) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: Colors.redAccent,
+                          content: Text(
+                            error.message ?? 'Could not save category',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text(
+                    'Save',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    nameController.dispose();
+
+    if (saved == true) {
+      _showSnackBar(isEditing ? 'Category updated' : 'Category created');
     }
   }
 
@@ -1651,7 +1810,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${data['type'] ?? 'item'} - \$${_readInt(data['price'])} - stock ${_readInt(data['stock'])}',
+                                  '${data['category'] ?? data['type'] ?? 'item'} - \$${_readInt(data['price'])} - stock ${_readInt(data['stock'])}',
                                   style: const TextStyle(
                                     color: Colors.grey,
                                     fontWeight: FontWeight.w600,
@@ -1808,6 +1967,104 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           tooltip: 'Delete user profile',
                           color: Colors.redAccent,
                           onPressed: () => _deleteUser(user.reference),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _categoriesTab() {
+    return Column(
+      children: [
+        _sectionHeader(
+          title: 'Categories',
+          subtitle: 'Create, edit, and remove shop categories.',
+          icon: Icons.list_alt,
+          trailing: IconButton.filled(
+            tooltip: 'Add category',
+            onPressed: () => _openCategoryEditor(),
+            icon: const Icon(Icons.add),
+          ),
+        ),
+        Expanded(
+          child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream: _firestore.collection('categories').snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _loadingState();
+              }
+              if (snapshot.hasError) {
+                return _errorState('Could not load categories.');
+              }
+
+              final categories = snapshot.data?.docs.toList() ?? [];
+              categories.sort((a, b) {
+                final aName = a.data()['name']?.toString() ?? a.id;
+                final bName = b.data()['name']?.toString() ?? b.id;
+                return aName.compareTo(bName);
+              });
+
+              if (categories.isEmpty) {
+                return _emptyState(
+                  icon: Icons.list_alt,
+                  title: 'No categories',
+                  subtitle: 'Add categories here, then choose them on products.',
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                itemCount: categories.length,
+                itemBuilder: (context, index) {
+                  final category = categories[index];
+                  final data = category.data();
+                  final name = data['name']?.toString() ?? category.id;
+
+                  return _panel(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                name,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                category.id,
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _compactAction(
+                          icon: Icons.edit_outlined,
+                          tooltip: 'Edit category',
+                          onPressed: () => _openCategoryEditor(category),
+                        ),
+                        _compactAction(
+                          icon: Icons.delete_outline,
+                          tooltip: 'Delete category',
+                          color: Colors.redAccent,
+                          onPressed: () => _deleteDocument(
+                            category.reference,
+                            'category',
+                          ),
                         ),
                       ],
                     ),
@@ -2006,7 +2263,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 900),
@@ -2032,6 +2289,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 tabs: [
                   Tab(icon: Icon(Icons.dashboard_outlined), text: 'Dashboard'),
                   Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Products'),
+                  Tab(text: 'Categories'),
                   Tab(icon: Icon(Icons.people_outline), text: 'Users'),
                   Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Orders'),
                 ],
@@ -2042,6 +2300,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 children: [
                   _dashboardTab(),
                   _productsTab(),
+                  _categoriesTab(),
                   _usersTab(),
                   _ordersTab(),
                 ],

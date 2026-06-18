@@ -17,15 +17,42 @@ class CarouselSlider extends StatefulWidget {
 class _CarouselSliderState extends State<CarouselSlider> {
   int newIndex = 0;
 
+  Widget _image(String image) {
+    if (image.isEmpty) {
+      return const Icon(Icons.image_not_supported_outlined, size: 70);
+    }
+
+    final isNetworkImage =
+        image.startsWith('http://') || image.startsWith('https://');
+
+    return isNetworkImage
+        ? Image.network(
+            image,
+            scale: 3,
+            errorBuilder: (_, __, ___) {
+              return const Icon(Icons.image_not_supported_outlined, size: 70);
+            },
+          )
+        : Image.asset(
+            image,
+            scale: 3,
+            errorBuilder: (_, __, ___) {
+              return const Icon(Icons.image_not_supported_outlined, size: 70);
+            },
+          );
+  }
+
   @override
   Widget build(BuildContext context) {
     var height = MediaQuery.of(context).size.height;
+    final items = widget.items.isEmpty ? [''] : widget.items;
+
     return Column(
       children: [
         SizedBox(
           height: height * 0.32,
           child: PageView.builder(
-            itemCount: widget.items.length,
+            itemCount: items.length,
             onPageChanged: (int currentIndex) {
               newIndex = currentIndex;
               setState(() {});
@@ -33,7 +60,7 @@ class _CarouselSliderState extends State<CarouselSlider> {
             itemBuilder: (_, index) {
               return FittedBox(
                 fit: BoxFit.none,
-                child: Image.network(widget.items[index], scale: 3),
+                child: _image(items[index]),
               );
             },
           ),
@@ -43,7 +70,7 @@ class _CarouselSliderState extends State<CarouselSlider> {
             dotColor: Colors.white,
             activeDotColor: AppColor.darkOrange,
           ),
-          count: widget.items.length,
+          count: items.length,
           activeIndex: newIndex,
         )
       ],
